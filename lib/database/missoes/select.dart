@@ -35,6 +35,7 @@ class Missao {
       'missoes',
       where: 'LOWER(nome) = ?',
       whereArgs: [nome.toLowerCase()],
+      limit: 1,
     );
     return result.isEmpty;
   }

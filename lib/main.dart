@@ -29,6 +29,13 @@ class MyApp extends StatelessWidget {
           backgroundColor: Colors.black87,
           foregroundColor: Colors.white, // cor do texto/ícones da AppBar
         ),
+        dialogTheme: const DialogThemeData(
+          backgroundColor: Color.fromARGB(255, 40, 50, 70),
+          titleTextStyle: TextStyle(color: Colors.white, fontSize: 18),
+          contentTextStyle: TextStyle(
+            color: Colors.white70,
+          ), // fundo do AlertDialog
+        ),
       ),
       home: const Missao(), // sua tela inicial
     );

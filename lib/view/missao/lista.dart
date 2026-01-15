@@ -14,16 +14,20 @@ class Lista extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: ativa ? Colors.blue.withAlpha(50) : null,
+      color: ativa ? Theme.of(context).colorScheme.primary.withAlpha(20) : null,
       child: ListTile(
         title: Text(
           nome,
           style: TextStyle(
             fontWeight: ativa ? FontWeight.bold : FontWeight.normal,
+            color: ativa ? Colors.white : Colors.black87,
           ),
         ),
         trailing: ativa
-            ? const Icon(Icons.check_circle, color: Colors.blue)
+            ? Icon(
+                Icons.check_circle,
+                color: Theme.of(context).colorScheme.primary,
+              )
             : null,
         onTap: onTap,
       ),

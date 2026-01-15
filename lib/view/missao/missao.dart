@@ -75,10 +75,10 @@ class _MissaoState extends State<Missao> {
                 if (nome.isEmpty) return;
                 final existe = await select.Missao.existeMissao(nome);
                 if (!c.mounted) return;
-                if (existe) {
+                if (!existe) {
                   ScaffoldMessenger.of(c).showSnackBar(
                     const SnackBar(
-                      content: Text('Já Existe uma missão com esse nome'),
+                      content: Text('Já existe uma missão com esse nome'),
                     ),
                   );
                   return;
@@ -118,12 +118,7 @@ class _MissaoState extends State<Missao> {
           }
           final missoes = snapshot.data ?? [];
           if (missoes.isEmpty) {
-            return const Center(
-              child: Text(
-                'Nenhuma missão criada',
-                style: const TextStyle(color: Colors.white),
-              ),
-            );
+            return const Center(child: Text('Nenhuma missão criada'));
           }
           return ListView.builder(
             padding: const EdgeInsets.all(8),
