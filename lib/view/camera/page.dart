@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -24,6 +23,10 @@ class _CameraState extends State<Camera> {
   String? _erro;
   File? _ultimaFoto;
   bool _abrirMaps = false;
+  File? _fotoAtual;
+  final GlobalKey _repaintKey = GlobalKey();
+  bool _tirandoFoto = false;
+
   static const double height = widgets.BottomBar.height;
 
   @override
@@ -38,8 +41,25 @@ class _CameraState extends State<Camera> {
     super.dispose();
   }
 
-  void _onFoto() {
-    debugPrint('Botão foto pressionado');
+  Future<void> _onFoto() async {
+    if (_tirandoFoto) return;
+    if (_controller == null || !_controller!.value.isInitialized) return;
+
+    try {
+      setState(() => _tirandoFoto = true);
+      final XFile xfile = await _controller!.takePicture();
+      final File file = File(xfile.path);
+      setState(() {
+        _fotoAtual = file;
+        _ultimaFoto = file;
+      });
+    } catch (e) {
+      debugPrint('Erro ao tirar foto: $e');
+    } finally {
+      if (!mounted) {
+        setState(() => _tirandoFoto = false);
+      }
+    }
   }
 
   void _onMaps() {
@@ -160,10 +180,10 @@ class _CameraState extends State<Camera> {
           Positioned.fill(
             bottom: height,
             child: widgets.Preview(
-              imageFile: null,
+              imageFile: _fotoAtual,
               preview: CameraPreview(_controller!),
               dados: '',
-              repaintKey: GlobalKey(),
+              repaintKey: _repaintKey,
               lat: null,
               lng: null,
             ),
