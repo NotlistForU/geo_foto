@@ -3,6 +3,7 @@ import 'package:sipam_foto/database/missoes/update.dart' as update;
 import 'package:sipam_foto/database/missoes/insert.dart' as insert;
 import 'package:sipam_foto/database/missoes/select.dart' as select;
 import 'package:sipam_foto/model/missao.dart' as model;
+import 'package:sipam_foto/view/camera/page.dart' as page;
 import 'package:sipam_foto/view/missao/lista.dart';
 
 class Missao extends StatefulWidget {
@@ -87,7 +88,10 @@ class _MissaoState extends State<Missao> {
                 if (!c.mounted) return;
                 Navigator.pop(c);
                 if (ativarAgora) {
-                  Navigator.pop(c, true);
+                  Navigator.push(
+                    c,
+                    MaterialPageRoute(builder: (_) => const page.Camera()),
+                  );
                 } else {
                   setState(() {
                     _reloadMissoes();
@@ -131,7 +135,10 @@ class _MissaoState extends State<Missao> {
                 onTap: () async {
                   await update.Missao.ativar(missao);
                   if (!c.mounted) return;
-                  Navigator.pop(c, true);
+                  Navigator.push(
+                    c,
+                    MaterialPageRoute(builder: (_) => const page.Camera()),
+                  );
                 },
               );
             },

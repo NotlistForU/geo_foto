@@ -1,10 +1,23 @@
 import 'dart:io';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:flutter/rendering.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:photo_manager/photo_manager.dart';
+
 import 'package:sipam_foto/view/camera/enum.dart';
+// IMPORT cases
+import 'package:sipam_foto/view/camera/cases/loading.dart' as cases;
+import 'package:sipam_foto/view/camera/cases/permissao_negada.dart' as cases;
+import 'package:sipam_foto/view/camera/cases/sem_missao.dart' as cases;
+import 'package:sipam_foto/view/camera/cases/camera_pronta.dart' as cases;
+import 'package:sipam_foto/view/camera/cases/erro.dart' as cases;
+
+// IMPORT widgets
 import 'package:sipam_foto/view/camera/widget/preview.dart' as widgets;
 import 'package:sipam_foto/view/camera/widget/bottom_bar.dart' as widgets;
+
 import 'package:sipam_foto/view/camera/permissoes.dart' as permissao;
 import 'package:sipam_foto/view/missao/missao.dart' as page;
 import 'package:sipam_foto/database/missoes/select.dart' as select;
@@ -22,6 +35,7 @@ class _CameraState extends State<Camera> {
   List<CameraDescription>? _cameras;
   String? _erro;
   File? _ultimaFoto;
+  File? _fotoTemporaria;
   bool _abrirMaps = false;
   File? _fotoAtual;
   final GlobalKey _repaintKey = GlobalKey();
@@ -42,23 +56,55 @@ class _CameraState extends State<Camera> {
   }
 
   Future<void> _onFoto() async {
-    if (_tirandoFoto) return;
-    if (_controller == null || !_controller!.value.isInitialized) return;
-
     try {
-      setState(() => _tirandoFoto = true);
+      if (_controller == null || !_controller!.value.isInitialized) return;
       final XFile xfile = await _controller!.takePicture();
       final File file = File(xfile.path);
       setState(() {
-        _fotoAtual = file;
-        _ultimaFoto = file;
+        _fotoTemporaria = file;
       });
     } catch (e) {
-      debugPrint('Erro ao tirar foto: $e');
-    } finally {
-      if (!mounted) {
-        setState(() => _tirandoFoto = false);
+      _erro = e.toString();
+      _setState(CameraStatus.erro);
+    }
+  }
+
+  Future<void> salvarFotoFinal() async {
+    try {
+      final boundary =
+          _repaintKey.currentContext!.findRenderObject()
+              as RenderRepaintBoundary;
+
+      final image = await boundary.toImage(pixelRatio: 3);
+      final byteData = await image.toByteData(format: ImageByteFormat.png);
+      final pngBytes = byteData!.buffer.asUint8List();
+
+      final permissao = await PhotoManager.requestPermissionExtend();
+      if (!permissao.isAuth) {
+        throw Exception('Permissão de galeria negada');
       }
+
+      // final AssetPathEntity albumSipam = await _getOrCreateAlbum('SIPAM');
+      // final AssetPathEntity subAlbum = await _getOrCreateAlbum()
+
+      final dir = Directory('/storage/emulated/0/Picures/missao/missao_01');
+      if (!await dir.exists()) {
+        await dir.create(recursive: true);
+      }
+      final fileName = 'foto_${DateTime.now().millisecondsSinceEpoch}.png';
+
+      final file = File('${dir.path}/$fileName');
+      await file.writeAsBytes(pngBytes);
+
+      if (_fotoTemporaria != null && await _fotoTemporaria!.exists()) {
+        await _fotoTemporaria!.delete();
+      }
+      setState(() {
+        _fotoTemporaria = null;
+      });
+    } catch (e) {
+      _erro = e.toString();
+      _setState(CameraStatus.erro);
     }
   }
 
@@ -71,9 +117,10 @@ class _CameraState extends State<Camera> {
       final missao = await select.Missao.missaoAtiva();
       if (missao == null) {
         _setState(CameraStatus.semMissao);
+        debugPrint('sem missao ativa');
         return;
       }
-
+      debugPrint('Missao ativa vmao ver a permissao');
       final permitido = await permissao.requestCameraAndLocationPermissions();
       if (!permitido) {
         _setState(CameraStatus.permissaoNegada);
@@ -90,10 +137,14 @@ class _CameraState extends State<Camera> {
     }
   }
 
+  void getInitFluxo() => _initFluxo();
+
   void _setState(CameraStatus novo) {
     if (!mounted) return;
     setState(() => _state = novo);
   }
+
+  void getSetState(CameraStatus novo) => _setState(novo);
 
   Future<void> _initCamera() async {
     _cameras = await availableCameras();
@@ -110,102 +161,30 @@ class _CameraState extends State<Camera> {
 
   @override
   Widget build(BuildContext c) {
+    debugPrint('>>> BUILD CAMERA PAGE <<<');
     switch (_state) {
       case CameraStatus.loading:
-        return _loading();
+        return cases.loading();
       case CameraStatus.semMissao:
-        return _semMissao(context);
+        return cases.SemMissao(
+          onSetState: getSetState,
+          onInitFluxo: getInitFluxo,
+        );
       case CameraStatus.permissaoNegada:
-        return _permissaoNegada(context);
+        return cases.permissaoNegada(c);
       case CameraStatus.inicializandoCamera:
-        return _loading(texto: 'Inicializando câmera...');
+        return cases.loading(texto: 'Inicializando câmera...');
       case CameraStatus.pronta:
-        return _cameraPronta();
+        return cases.cameraPronta(
+          fotoTemporaria: _fotoTemporaria,
+          controller: _controller!,
+          repaintKey: _repaintKey,
+          onFoto: _onFoto,
+          onMaps: _onMaps,
+          abrirMaps: _abrirMaps,
+        );
       case CameraStatus.erro:
-        return _erroTela();
+        return cases.erro(mensagem: _erro ?? 'Erro desconhecido');
     }
-  }
-
-  Widget _loading({String texto = 'Carregando...'}) {
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 12),
-            Text(texto),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _semMissao(BuildContext c) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Câmera')),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () async {
-            await Navigator.push(
-              c,
-              MaterialPageRoute(builder: (_) => const page.Missao()),
-            );
-            _setState(CameraStatus.loading);
-            _initFluxo();
-          },
-          child: const Text('Ativar missão'),
-        ),
-      ),
-    );
-  }
-
-  Widget _permissaoNegada(BuildContext c) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Permissão necessária')),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: openAppSettings,
-          child: const Text('Abrir configurações'),
-        ),
-      ),
-    );
-  }
-
-  Widget _cameraPronta() {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Câmera')),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            bottom: height,
-            child: widgets.Preview(
-              imageFile: _fotoAtual,
-              preview: CameraPreview(_controller!),
-              dados: '',
-              repaintKey: _repaintKey,
-              lat: null,
-              lng: null,
-            ),
-          ),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: widgets.BottomBar(
-              ultimaFoto: _ultimaFoto,
-              onFoto: _onFoto,
-              onMaps: _onMaps,
-              abrirMaps: _abrirMaps,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _erroTela() {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Erro')),
-      body: Center(child: Text(_erro ?? 'Erro desconhecido')),
-    );
   }
 }

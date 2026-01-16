@@ -4,14 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:sipam_foto/view/galeria/galeria.dart';
 
 class BottomBar extends StatelessWidget {
-  final File? ultimaFoto;
+  final File? fotoTemporaria;
   final VoidCallback onFoto;
   final VoidCallback onMaps;
   final bool abrirMaps;
   static const double height = 110;
   const BottomBar({
     super.key,
-    required this.ultimaFoto,
+    required this.fotoTemporaria,
     required this.onFoto,
     required this.onMaps,
     required this.abrirMaps,
@@ -38,7 +38,7 @@ class BottomBar extends StatelessWidget {
                 MaterialPageRoute(builder: (_) => const Galeria()),
               );
             },
-            icon: ultimaFoto == null
+            icon: fotoTemporaria == null
                 ? const Icon(
                     Icons.photo_library_outlined,
                     color: Colors.white,
@@ -47,7 +47,7 @@ class BottomBar extends StatelessWidget {
                 : ClipRRect(
                     borderRadius: BorderRadius.circular(6),
                     child: Image.file(
-                      ultimaFoto!,
+                      fotoTemporaria!,
                       width: 36,
                       height: 36,
                       fit: BoxFit.cover,
