@@ -83,9 +83,11 @@ class _CameraState extends State<Camera> {
       if (!permissao.isAuth) {
         throw Exception('Permissão de galeria negada');
       }
-
+      final missao = select.Missao.missaoAtiva();
       // final AssetPathEntity albumSipam = await _getOrCreateAlbum('SIPAM');
-      // final AssetPathEntity subAlbum = await _getOrCreateAlbum()
+      // final AssetPathEntity subAlbum = await _getOrCreateAlbum(
+      //   '${missao.}'
+      // )
 
       final dir = Directory('/storage/emulated/0/Picures/missao/missao_01');
       if (!await dir.exists()) {
