@@ -8,6 +8,7 @@ import 'package:sipam_foto/view/camera/widget/preview.dart' as widgets;
 
 const double height = widgets.BottomBar.height;
 Widget cameraPronta({
+  required bool feedback,
   required File? fotoTemporaria,
   required CameraController controller,
   required GlobalKey repaintKey,
@@ -22,13 +23,21 @@ Widget cameraPronta({
       children: [
         Positioned.fill(
           bottom: height,
-          child: widgets.Preview(
-            imageFile: fotoTemporaria,
-            preview: CameraPreview(controller),
-            dados: localizacaoAtual?.dados ?? 'Obtendo GPS...',
-            repaintKey: repaintKey,
-            lat: localizacaoAtual?.latitude,
-            lng: localizacaoAtual?.longitude,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 100),
+            decoration: BoxDecoration(
+              border: feedback
+                  ? Border.all(color: Colors.white, width: 6)
+                  : null,
+            ),
+            child: widgets.Preview(
+              imageFile: fotoTemporaria,
+              preview: CameraPreview(controller),
+              dados: localizacaoAtual?.dados ?? 'Obtendo GPS...',
+              repaintKey: repaintKey,
+              lat: localizacaoAtual?.latitude,
+              lng: localizacaoAtual?.longitude,
+            ),
           ),
         ),
         Align(

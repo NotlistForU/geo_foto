@@ -108,7 +108,6 @@ class _MissaoState extends State<Missao> {
 
   @override
   Widget build(BuildContext context) {
-    final c = context;
     return Scaffold(
       appBar: AppBar(title: const Text('Missões')),
       body: FutureBuilder<List<model.Missao>>(
@@ -139,6 +138,9 @@ class _MissaoState extends State<Missao> {
                     c,
                     MaterialPageRoute(builder: (_) => const page.Camera()),
                   );
+                  setState(() {
+                    _reloadMissoes();
+                  });
                 },
               );
             },

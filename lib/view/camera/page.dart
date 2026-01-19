@@ -49,10 +49,9 @@ class _CameraState extends State<Camera> {
   bool _abrirMaps = false;
   File? _fotoAtual;
   final GlobalKey _repaintKey = GlobalKey();
-  bool _tirandoFoto = false;
+  bool feedback = false;
   model.Localizacao? localizacaoAtual;
 
-  static const double height = widgets.BottomBar.height;
   late final StreamSubscription<model.Localizacao> sub;
 
   @override
@@ -68,6 +67,21 @@ class _CameraState extends State<Camera> {
     super.dispose();
   }
 
+  void onUpdate() {
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  void triggerFeedback() {
+    feedback = true;
+    onUpdate();
+
+    Future.delayed(const Duration(milliseconds: 120), () {
+      feedback = false;
+      onUpdate();
+    });
+  }
+
   Future<void> _onFoto() async {
     try {
       if (_controller == null || !_controller!.value.isInitialized) return;
@@ -75,7 +89,9 @@ class _CameraState extends State<Camera> {
       final File file = File(xfile.path);
       setState(() {
         _fotoTemporaria = file;
+        triggerFeedback();
       });
+      await salvarFotoFinal();
     } catch (e) {
       _erro = e.toString();
       _setState(CameraStatus.erro);
@@ -140,7 +156,7 @@ class _CameraState extends State<Camera> {
         return;
       }
       debugPrint('Missao ativa vmao ver a permissao');
-      final permitido = await permissao.requestCameraAndLocationPermissions();
+      final permitido = await permissao.requestAllPermissions();
       if (!permitido) {
         _setState(CameraStatus.permissaoNegada);
         return;
@@ -200,6 +216,7 @@ class _CameraState extends State<Camera> {
         return cases.loading(texto: 'Inicializando câmera...');
       case CameraStatus.pronta:
         return cases.cameraPronta(
+          feedback: feedback,
           fotoTemporaria: _fotoTemporaria,
           controller: _controller!,
           repaintKey: _repaintKey,

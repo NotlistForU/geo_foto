@@ -28,11 +28,7 @@ class Preview extends StatelessWidget {
       key: repaintKey,
       child: Stack(
         children: [
-          Positioned.fill(
-            child: imageFile != null
-                ? Image.file(imageFile!, fit: BoxFit.cover)
-                : preview,
-          ),
+          Positioned.fill(child: preview),
           if (lat != null && lng != null)
             Positioned(
               top: 10,
