@@ -92,6 +92,9 @@ class _MissaoState extends State<Missao> {
                     c,
                     MaterialPageRoute(builder: (_) => const page.Camera()),
                   );
+                  setState(() {
+                    _reloadMissoes();
+                  });
                 } else {
                   setState(() {
                     _reloadMissoes();
