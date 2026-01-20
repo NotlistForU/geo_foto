@@ -5,22 +5,28 @@ import 'package:latlong2/latlong.dart';
 class MiniMap extends StatelessWidget {
   final double lat;
   final double lng;
+  final MapController _mapController = MapController();
 
-  const MiniMap({super.key, required this.lat, required this.lng});
+  MiniMap({super.key, required this.lat, required this.lng});
 
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: SizedBox(
-        height: 150,
-        width: 150,
+        height: 170,
+        width: 170,
         child: FlutterMap(
+          mapController: _mapController,
           options: MapOptions(
             initialCenter: LatLng(lat, lng),
             initialZoom: 13,
+            onLongPress: (tapPosition, point) {
+              _mapController.move(LatLng(lat, lng), 13);
+              _mapController.rotate(0);
+            },
             interactionOptions: const InteractionOptions(
-              flags: InteractiveFlag.none,
+              flags: InteractiveFlag.all,
             ),
           ),
           children: [

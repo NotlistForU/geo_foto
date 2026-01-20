@@ -15,7 +15,7 @@ Widget cameraPronta({
   required GlobalKey repaintKey,
   required VoidCallback onFoto,
   required VoidCallback onMaps,
-  required bool abrirMaps,
+  required bool podeAbrirMaps,
   required model.Localizacao? localizacaoAtual,
 }) {
   return Scaffold(
@@ -48,7 +48,7 @@ Widget cameraPronta({
             fotoTemporaria: fotoTemporaria,
             onFoto: onFoto,
             onMaps: onMaps,
-            abrirMaps: abrirMaps,
+            abrirMaps: podeAbrirMaps,
           ),
         ),
       ],

@@ -31,6 +31,10 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # abrir URLs
+  url_launcher: 6.3.2
+  google_maps_flutter: ^2.14.0
+
   # Para formata data pt_BR
   intl: 0.20.2 
 

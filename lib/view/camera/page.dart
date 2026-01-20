@@ -1,14 +1,17 @@
 import 'dart:async';
-import 'dart:io';
+import 'dart:io' show Platform, File;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/rendering.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:sipam_foto/database/localizacao/service.dart';
 
 import 'package:sipam_foto/view/camera/enum.dart';
+
+import 'package:http/http.dart' as http;
 
 //IMPORT model
 import 'package:sipam_foto/model/missao.dart' as model;
@@ -47,7 +50,6 @@ class _CameraState extends State<Camera> {
   String? _erro;
   File? _ultimaFoto;
   File? _fotoTemporaria;
-  bool _abrirMaps = false;
   File? _fotoAtual;
   final GlobalKey _repaintKey = GlobalKey();
   bool feedback = false;
@@ -167,8 +169,52 @@ class _CameraState extends State<Camera> {
     }
   }
 
-  void _onMaps() {
-    debugPrint('Abrir maps');
+  Future<bool> podeAbrirMaps() async {
+    debugPrint(
+      ">>> podeAbrirMaps chamado: localizacaoAtual = $localizacaoAtual",
+    );
+    try {
+      localizacaoAtual != null;
+
+      final tentativa = await http
+          .get(Uri.parse("https://www.google.com"))
+          .timeout(const Duration(seconds: 5));
+      return tentativa.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _onMaps() async {
+    if (await podeAbrirMaps()) {
+      Uri url;
+      if (Platform.isIOS) {
+        url = Uri.parse(
+          "geo:${localizacaoAtual!.latitude},${localizacaoAtual!.longitude}",
+        );
+      }
+      if (Platform.isAndroid) {
+        url = Uri.parse(
+          "geo:${localizacaoAtual!.latitude},${localizacaoAtual!.longitude}?q=${localizacaoAtual!.latitude},${localizacaoAtual!.longitude}",
+        );
+      } else {
+        url = Uri.parse(
+          "https://maps.google.com/?q=${localizacaoAtual!.latitude},${localizacaoAtual!.longitude}",
+        );
+      }
+      try {
+        final launch = await launchUrl(
+          url,
+          mode: LaunchMode.externalApplication,
+        );
+        if (!launch) {
+          debugPrint('>>>> nao conseguiu abrir o Map');
+        }
+      } catch (e, s) {
+        debugPrint(">>> ERRO ao abrir Maps: $e");
+        debugPrint(">>> Stacktrace: $s");
+      }
+    }
   }
 
   Future<void> _initFluxo() async {
@@ -239,16 +285,23 @@ class _CameraState extends State<Camera> {
       case CameraStatus.inicializandoCamera:
         return cases.loading(texto: 'Inicializando câmera...');
       case CameraStatus.pronta:
-        return cases.cameraPronta(
-          tirandoFoto: _tirandoFoto,
-          feedback: feedback,
-          fotoTemporaria: _fotoTemporaria,
-          controller: _controller!,
-          repaintKey: _repaintKey,
-          onFoto: _onFoto,
-          onMaps: _onMaps,
-          abrirMaps: _abrirMaps,
-          localizacaoAtual: localizacaoAtual,
+        return FutureBuilder<bool>(
+          future: podeAbrirMaps(),
+          builder: (context, snapshot) {
+            final podeAbrir = snapshot.data ?? false;
+
+            return cases.cameraPronta(
+              tirandoFoto: _tirandoFoto,
+              feedback: feedback,
+              fotoTemporaria: _fotoTemporaria,
+              controller: _controller!,
+              repaintKey: _repaintKey,
+              onFoto: _onFoto,
+              onMaps: _onMaps,
+              podeAbrirMaps: podeAbrir,
+              localizacaoAtual: localizacaoAtual,
+            );
+          },
         );
       case CameraStatus.erro:
         return cases.erro(mensagem: _erro ?? 'Erro desconhecido');
