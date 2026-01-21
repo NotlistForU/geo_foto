@@ -25,6 +25,16 @@ class _GaleriaState extends State<Galeria> {
 
   Future<void> carregarGaleria() async {
     setState(() => loading = true);
+    final permissao = await PhotoManager.requestPermissionExtend();
+    if (!permissao.isAuth) {
+      setState(() {
+        setState(() => loading = false);
+        return;
+      });
+    }
+    await PhotoManager.clearFileCache();
+    await PhotoManager.releaseCache();
+
     fotos = await select.Foto.todasFotos();
     final ids = fotos.map((f) => f.assetId).toList();
     final Map<String, AssetEntity> temp = {};

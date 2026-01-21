@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:sipam_foto/view/galeria/galeria.dart';
+import 'package:sipam_foto/view/galeria/page.dart';
 
 class BottomBar extends StatelessWidget {
   final File? fotoTemporaria;
