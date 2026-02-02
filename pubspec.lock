@@ -52,9 +52,11 @@ packages:
   camera_overlay:
     dependency: "direct main"
     description:
-      path: camera_overlay
-      relative: true
-    source: path
+      path: "."
+      ref: main
+      resolved-ref: "9d5ff7b059348f1e8743d90f2324455ead5acadf"
+      url: "https://github.com/NotlistForU/camera_overlay.git"
+    source: git
     version: "0.0.1"
   camera_platform_interface:
     dependency: transitive
