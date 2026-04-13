@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:sipam_foto/view/galeria/foto.dart' as photo_view;
+import 'package:sipam_foto/view/galeria/foto.dart' as galeria_foto;
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:sipam_foto/model/foto.dart' as model;
@@ -109,7 +109,11 @@ class _GaleriaState extends State<Galeria> {
               final removida = await Navigator.push(
                 c,
                 MaterialPageRoute(
-                  builder: (_) => photo_view.Foto(asset: asset, foto: foto),
+                  builder: (_) => galeria_foto.Foto(
+                    assets: assets,
+                    fotos: fotos,
+                    initialIndex: index,
+                  ),
                 ),
               );
               if (removida == true) {

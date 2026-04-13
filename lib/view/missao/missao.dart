@@ -125,9 +125,12 @@ class _MissaoState extends State<Missao> {
                     c,
                     MaterialPageRoute(
                       builder: (_) => cam.CameraOverlay(
-                        temBotaoGoogleMaps: false,
-                        temBotaoGaleria: false,
-                        temMiniMapa: false,
+                        titulo: "Câmera",
+                        anguloRotacaoDireita: -90,
+                        anguloRotacaoEsquerda: 90,
+                        temBotaoGoogleMaps: true,
+                        temBotaoGaleria: true,
+                        temMiniMapa: true,
                         onFotoFinal: (bytes, localizacao) async {
                           final model.Missao? missaoAtiva =
                               await select.Missao.missaoAtiva();
@@ -140,6 +143,15 @@ class _MissaoState extends State<Missao> {
                           await salvarFotoDaMissao(
                             bytes: bytes,
                             localizacao: locApp,
+                          );
+                        },
+                        onAbrirGaleria: () async {
+                          debugPrint('botao galeria clicado');
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const page.Galeria(),
+                            ),
                           );
                         },
                       ),
@@ -165,7 +177,21 @@ class _MissaoState extends State<Missao> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Missões')),
+      appBar: AppBar(
+        title: const Text('Missões'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.photo_library),
+            onPressed: () {
+              debugPrint('Botão galeria clicado');
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const page.Galeria()),
+              );
+            },
+          ),
+        ],
+      ),
       body: FutureBuilder<List<model.Missao>>(
         future: missoesFuture,
         builder: (context, snapshot) {
@@ -194,6 +220,7 @@ class _MissaoState extends State<Missao> {
                     context,
                     MaterialPageRoute(
                       builder: (_) => cam.CameraOverlay(
+                        titulo: "Câmera",
                         temBotaoGoogleMaps: true,
                         temBotaoGaleria: true,
                         temMiniMapa: true,
