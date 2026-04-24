@@ -12,7 +12,19 @@ class Foto {
   static Future<void> varias(List<model.Foto> fotos) async {
     if (fotos.isEmpty) return;
     final ids = fotos.map((f) => f.assetId).toList();
-    await PhotoManager.editor.deleteWithIds(ids);
+    final verificacoes = await Future.wait(
+      ids.map((id) => AssetEntity.fromId(id)),
+    );
+
+    final idsQueExistem = verificacoes
+        .where((asset) => asset != null)
+        .map((asset) => asset!.id)
+        .toList();
+
+    if (idsQueExistem.isNotEmpty) {
+      await PhotoManager.editor.deleteWithIds(ids);
+    }
+
     final db = await Create.database;
     final batch = db.batch();
     for (final foto in fotos) {

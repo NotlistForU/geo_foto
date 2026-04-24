@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:sipam_foto/view/galeria/foto.dart' as galeria_foto;
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:sipam_foto/model/foto.dart' as model;
 import 'package:sipam_foto/model/filtro.dart' as model;
 import 'package:sipam_foto/database/fotos/select.dart' as select;
+import 'package:sipam_foto/database/fotos/delete.dart' as delete;
 import 'package:sipam_foto/view/galeria/thumbnail.dart';
 import 'package:sipam_foto/view/galeria/modal.dart' as modal;
 
@@ -14,7 +16,10 @@ class Galeria extends StatefulWidget {
   State<Galeria> createState() => _GaleriaState();
 }
 
+enum TipoOrdem { maisRecente, maisAntigas, nomeAz, nomeZa }
+
 class _GaleriaState extends State<Galeria> {
+  TipoOrdem _ordemAtual = TipoOrdem.maisRecente;
   bool loading = true;
   List<model.Foto> fotos = [];
   Map<String, AssetEntity> assets = {};
@@ -24,6 +29,44 @@ class _GaleriaState extends State<Galeria> {
   void initState() {
     super.initState();
     carregarGaleria();
+
+    PhotoManager.addChangeCallback(_onPhotoLibraryChanged);
+    PhotoManager.startChangeNotify();
+  }
+
+  @override
+  void dispose() {
+    PhotoManager.removeChangeCallback(_onPhotoLibraryChanged);
+    PhotoManager.stopChangeNotify();
+    super.dispose();
+  }
+
+  void _onPhotoLibraryChanged(MethodCall call) {
+    // Apenas se a tela tiver aberta -> tenta recarregar.
+    if (mounted) {
+      carregarGaleria();
+    }
+  }
+
+  void _ordenarLista(TipoOrdem novaOrdem) {
+    setState(() {
+      _ordemAtual = novaOrdem;
+
+      switch (_ordemAtual) {
+        case TipoOrdem.maisRecente:
+          fotos.sort((a, b) => b.data.compareTo(a.data));
+          break;
+        case TipoOrdem.maisAntigas:
+          fotos.sort((a, b) => a.data.compareTo(b.data));
+          break;
+        case TipoOrdem.nomeAz:
+          fotos.sort((a, b) => a.nome.compareTo(b.nome));
+          break;
+        case TipoOrdem.nomeZa:
+          fotos.sort((a, b) => b.nome.compareTo(a.nome));
+          break;
+      }
+    });
   }
 
   Future<void> carregarGaleria() async {
@@ -39,15 +82,23 @@ class _GaleriaState extends State<Galeria> {
     await PhotoManager.releaseCache();
 
     fotos = await select.Foto.filtro(filtroAtual);
-    final ids = fotos.map((f) => f.assetId).toList();
+
     final Map<String, AssetEntity> temp = {};
-    for (final id in ids) {
-      final asset = await AssetEntity.fromId(id);
+
+    List<model.Foto> fotosValidas = [];
+
+    for (final foto in fotos) {
+      final asset = await AssetEntity.fromId(foto.assetId);
       if (asset != null) {
-        temp[id] = asset;
+        temp[foto.assetId] = asset;
+        fotosValidas.add(foto);
+      } else {
+        await delete.Foto.uma(foto);
       }
     }
+
     assets = temp;
+    fotos = fotosValidas;
 
     setState(() => loading = false);
   }
@@ -58,6 +109,29 @@ class _GaleriaState extends State<Galeria> {
       appBar: AppBar(
         title: const Text('Galeria'),
         actions: [
+          PopupMenuButton<TipoOrdem>(
+            icon: const Icon(Icons.sort),
+            onSelected: _ordenarLista,
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<TipoOrdem>>[
+              const PopupMenuItem<TipoOrdem>(
+                value: TipoOrdem.maisRecente,
+                child: Text('Mais Recentes'),
+              ),
+              const PopupMenuItem<TipoOrdem>(
+                value: TipoOrdem.maisAntigas,
+                child: Text('Mais antigas'),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem<TipoOrdem>(
+                value: TipoOrdem.nomeAz,
+                child: Text('Nome (A-Z)'),
+              ),
+              const PopupMenuItem<TipoOrdem>(
+                value: TipoOrdem.nomeZa,
+                child: Text('Nome (Z-A)'),
+              ),
+            ],
+          ),
           IconButton(
             icon: const Icon(Icons.filter_alt),
             onPressed: () async {
@@ -108,12 +182,15 @@ class _GaleriaState extends State<Galeria> {
             onTap: () async {
               final removida = await Navigator.push(
                 c,
-                MaterialPageRoute(
-                  builder: (_) => galeria_foto.Foto(
-                    assets: assets,
-                    fotos: fotos,
-                    initialIndex: index,
-                  ),
+                PageRouteBuilder(
+                  opaque:
+                      false, // <-- É isso aqui que deixa o fundo transparente!
+                  pageBuilder: (context, animation, secondaryAnimation) =>
+                      galeria_foto.Foto(
+                        assets: assets,
+                        fotos: fotos,
+                        initialIndex: index,
+                      ),
                 ),
               );
               if (removida == true) {

@@ -42,17 +42,22 @@ class _FotoState extends State<Foto> {
   Widget build(BuildContext context) {
     final fotoAtual = widget.fotos[_currentIndex];
 
-    return Dismissible(
-      key: const Key('tela_foto_dismiss'),
-      direction: DismissDirection.vertical,
-      onDismissed: (direction) {
-        Navigator.pop(context, false);
+    return ExtendedImageSlidePage(
+      key: const Key('tela_foto_slide'),
+      slidePageBackgroundHandler: (offset, pageSize) {
+        return Colors.black.withOpacity(
+          1.0 -
+              offset.distance /
+                  (Offset(pageSize.width, pageSize.height).distance / 2.0),
+        );
       },
+      slideAxis: SlideAxis.both,
+      slideType: SlideType.onlyImage,
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: Colors.transparent, // Obrigatório ser transparente
         extendBodyBehindAppBar: true,
         appBar: AppBar(
-          backgroundColor: Colors.transparent,
+          backgroundColor: Colors.black.withOpacity(0.3),
           elevation: 0,
           actions: [
             IconButton(
@@ -78,47 +83,23 @@ class _FotoState extends State<Foto> {
 
             if (asset == null) return const SizedBox.shrink();
 
-            return AnimatedBuilder(
-              animation: _pageController,
-              builder: (context, child) {
-                double value = 0.0;
-                if (_pageController.position.haveDimensions) {
-                  value = _pageController.page! - index;
-                } else {
-                  value = (_currentIndex - index).toDouble();
-                }
-
-                Widget extendedImage = ExtendedImage(
-                  image: AssetEntityImageProvider(asset, isOriginal: true),
-                  fit: BoxFit.contain,
-                  mode: ExtendedImageMode.gesture,
-                  initGestureConfigHandler: (state) {
-                    return GestureConfig(
-                      minScale: 1.0,
-                      animationMinScale: 0.8,
-                      maxScale: 3.0,
-                      animationMaxScale: 3.5,
-                      speed: 1.0,
-                      inertialSpeed: 100.0,
-                      initialScale: 1.0,
-                      inPageView: true,
-                    );
-                  },
+            // Removemos o AnimatedBuilder e retornamos o ExtendedImage direto!
+            return ExtendedImage(
+              image: AssetEntityImageProvider(asset, isOriginal: true),
+              fit: BoxFit.contain,
+              mode: ExtendedImageMode.gesture,
+              enableSlideOutPage: true, // <-- ESSENCIAL PARA FUNCIONAR
+              initGestureConfigHandler: (state) {
+                return GestureConfig(
+                  minScale: 1.0,
+                  animationMinScale: 0.8,
+                  maxScale: 3.0,
+                  animationMaxScale: 3.5,
+                  speed: 1.0,
+                  inertialSpeed: 100.0,
+                  initialScale: 1.0,
+                  inPageView: true,
                 );
-
-                if (value > 0) {
-                  return Transform.translate(
-                    offset: Offset(
-                      value * MediaQuery.of(context).size.width,
-                      0,
-                    ),
-                    child: Transform.scale(
-                      scale: 1.0 - (value * 0.15),
-                      child: extendedImage,
-                    ),
-                  );
-                }
-                return extendedImage;
               },
             );
           },
