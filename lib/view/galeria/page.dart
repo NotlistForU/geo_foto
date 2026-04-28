@@ -22,6 +22,7 @@ class _GaleriaState extends State<Galeria> {
   TipoOrdem _ordemAtual = TipoOrdem.maisRecente;
   bool loading = true;
   List<model.Foto> fotos = [];
+  List<model.Foto> fotosSelecionadas = [];
   Map<String, AssetEntity> assets = {};
   model.Filtro filtroAtual = model.Filtro.empty;
 
@@ -107,10 +108,47 @@ class _GaleriaState extends State<Galeria> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Galeria'),
+        leading: fotosSelecionadas.isNotEmpty
+            ? IconButton(
+                onPressed: () {
+                  setState(() {
+                    fotosSelecionadas.clear();
+                  });
+                },
+                icon: const Icon(Icons.close),
+              )
+            : null,
+        title: Text(
+          fotosSelecionadas.isEmpty
+              ? 'Galeria'
+              : '${fotosSelecionadas.length}  ${fotosSelecionadas.length > 1 ? "selecionadas" : "selecionada"}',
+        ),
         actions: [
+          if (fotos.length != fotosSelecionadas.length)
+            IconButton(
+              icon: const Icon(Icons.select_all),
+              tooltip: 'Selecionar todas',
+              onPressed: () {
+                setState(() {
+                  fotosSelecionadas = List.from(fotos);
+                });
+              },
+            ),
+          if (fotosSelecionadas.isNotEmpty)
+            IconButton(
+              onPressed: () async {
+                await delete.Foto.varias(fotosSelecionadas);
+                if (fotos.isEmpty) {
+                  if (context.mounted) {
+                    Navigator.pop(context, true);
+                  }
+                }
+              },
+              icon: const Icon(Icons.delete),
+            ),
           PopupMenuButton<TipoOrdem>(
             icon: const Icon(Icons.sort),
+            tooltip: 'Mostrar menu',
             onSelected: _ordenarLista,
             itemBuilder: (BuildContext context) => <PopupMenuEntry<TipoOrdem>>[
               const PopupMenuItem<TipoOrdem>(
@@ -133,6 +171,7 @@ class _GaleriaState extends State<Galeria> {
             ],
           ),
           IconButton(
+            tooltip: 'Filtrar por',
             icon: const Icon(Icons.filter_alt),
             onPressed: () async {
               final resultado = await showModalBottomSheet(
@@ -179,6 +218,16 @@ class _GaleriaState extends State<Galeria> {
             return const SizedBox.shrink();
           }
           return GestureDetector(
+            onLongPress: () {
+              setState(() {
+                if (fotosSelecionadas.isEmpty) {
+                  fotosSelecionadas.add(foto);
+                  debugPrint(
+                    "OnLongPress-> Fotos selecionadas: ${fotosSelecionadas.length}",
+                  );
+                }
+              });
+            },
             onTap: () async {
               final removida = await Navigator.push(
                 c,
@@ -189,6 +238,7 @@ class _GaleriaState extends State<Galeria> {
                       galeria_foto.Foto(
                         assets: assets,
                         fotos: fotos,
+                        fotosSelecionadas: fotosSelecionadas,
                         initialIndex: index,
                       ),
                 ),
@@ -197,7 +247,21 @@ class _GaleriaState extends State<Galeria> {
                 carregarGaleria();
               }
             },
-            child: Thumbnail(asset: asset, foto: foto),
+            child: Thumbnail(
+              asset: asset,
+              foto: foto,
+              isSelected: fotosSelecionadas.contains(foto),
+              isSelectionMode: fotosSelecionadas.isNotEmpty,
+              onSelectToggle: () {
+                setState(() {
+                  if (fotosSelecionadas.contains(foto)) {
+                    fotosSelecionadas.remove(foto);
+                  } else {
+                    fotosSelecionadas.add(foto);
+                  }
+                });
+              },
+            ),
           );
         },
       ),

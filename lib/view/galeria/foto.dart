@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:extended_image/extended_image.dart';
@@ -10,11 +11,13 @@ class Foto extends StatefulWidget {
   final Map<String, AssetEntity> assets;
   final List<model.Foto> fotos;
   final int initialIndex;
+  final List<model.Foto> fotosSelecionadas;
   const Foto({
     super.key,
     required this.assets,
     required this.fotos,
     required this.initialIndex,
+    required this.fotosSelecionadas,
   });
 
   @override
@@ -41,35 +44,31 @@ class _FotoState extends State<Foto> {
   @override
   Widget build(BuildContext context) {
     final fotoAtual = widget.fotos[_currentIndex];
+    final dataFormatada = DateFormat('dd/MM/yyyy').format(fotoAtual.data);
 
     return ExtendedImageSlidePage(
       key: const Key('tela_foto_slide'),
       slidePageBackgroundHandler: (offset, pageSize) {
-        return Colors.black.withOpacity(
-          1.0 -
-              offset.distance /
-                  (Offset(pageSize.width, pageSize.height).distance / 2.0),
-        );
+        double opacity =
+            1.0 -
+            offset.distance /
+                (Offset(pageSize.width, pageSize.height).distance / 2.0);
+        return Colors.black.withValues(alpha: opacity.clamp(0.0, 1.0));
       },
       slideAxis: SlideAxis.both,
       slideType: SlideType.onlyImage,
       child: Scaffold(
         backgroundColor: Colors.transparent, // Obrigatório ser transparente
         extendBodyBehindAppBar: true,
+        extendBody: true,
         appBar: AppBar(
-          backgroundColor: Colors.black.withOpacity(0.3),
+          backgroundColor: Colors.black.withValues(alpha: 0.3),
+          title: Text(
+            widget.fotosSelecionadas.isNotEmpty
+                ? '${widget.fotosSelecionadas.length}  ${widget.fotosSelecionadas.length > 1 ? "selecionadas" : "selecionada"}'
+                : dataFormatada,
+          ),
           elevation: 0,
-          actions: [
-            IconButton(
-              onPressed: () async {
-                await delete.Foto.uma(fotoAtual);
-                if (context.mounted) {
-                  Navigator.pop(context, true);
-                }
-              },
-              icon: const Icon(Icons.delete, color: Colors.white),
-            ),
-          ],
         ),
         body: ExtendedImageGesturePageView.builder(
           controller: _pageController,
@@ -103,6 +102,26 @@ class _FotoState extends State<Foto> {
               },
             );
           },
+        ),
+        bottomNavigationBar: BottomAppBar(
+          color: Colors.black.withValues(alpha: 0.3),
+          elevation: 0,
+          surfaceTintColor: Colors.transparent,
+          height: 60,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              IconButton(
+                onPressed: () async {
+                  await delete.Foto.uma(fotoAtual);
+                  if (context.mounted) {
+                    Navigator.pop(context, true);
+                  }
+                },
+                icon: const Icon(Icons.delete, color: Colors.white),
+              ),
+            ],
+          ),
         ),
       ),
     );

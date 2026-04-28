@@ -1,6 +1,12 @@
 import 'package:sipam_foto/database/create.dart';
 import 'package:sipam_foto/database/util/queries.dart';
 import 'package:sipam_foto/database/missoes/update.dart' as update;
+import 'package:sipam_foto/database/missoes/insert.dart' as insert;
+import 'package:sipam_foto/database/missoes/select.dart' as select;
+import 'package:sipam_foto/database/missoes/delete.dart' as delete;
+import 'package:sipam_foto/database/fotos/select.dart' as select;
+import 'package:sipam_foto/database/fotos/delete.dart' as delete;
+import 'package:sipam_foto/database/fotos/insert.dart' as insert;
 
 class FotoMissao {
   final int missaoid;

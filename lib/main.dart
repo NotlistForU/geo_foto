@@ -17,6 +17,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false, // remove a faixa "debug"
       title: 'Meu App',
       theme: ThemeData(
+        listTileTheme: const ListTileThemeData(textColor: Colors.white),
         scaffoldBackgroundColor: const Color.fromARGB(
           255,
           25,
@@ -40,7 +41,9 @@ class MyApp extends StatelessWidget {
           ), // fundo do AlertDialog
         ),
         dropdownMenuTheme: DropdownMenuThemeData(menuStyle: const MenuStyle()),
+        switchTheme: const SwitchThemeData(),
       ),
+
       home: const Missao(), // sua tela inicial
     );
   }
