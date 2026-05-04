@@ -10,13 +10,15 @@ import 'package:sipam_foto/database/fotos/delete.dart' as delete;
 import 'package:sipam_foto/view/galeria/thumbnail.dart';
 import 'package:sipam_foto/view/galeria/modal.dart' as modal;
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 class Galeria extends StatefulWidget {
   const Galeria({super.key});
   @override
   State<Galeria> createState() => _GaleriaState();
 }
 
-enum TipoOrdem { maisRecente, maisAntigas, nomeAz, nomeZa }
+enum TipoOrdem { maisRecente, maisAntigas, crescente, decrescente }
 
 class _GaleriaState extends State<Galeria> {
   TipoOrdem _ordemAtual = TipoOrdem.maisRecente;
@@ -60,11 +62,20 @@ class _GaleriaState extends State<Galeria> {
         case TipoOrdem.maisAntigas:
           fotos.sort((a, b) => a.data.compareTo(b.data));
           break;
-        case TipoOrdem.nomeAz:
-          fotos.sort((a, b) => a.nome.compareTo(b.nome));
+        case TipoOrdem.crescente:
+          fotos.sort((a, b) {
+            int numA = int.parse(a.nome.split('_').last);
+            int numB = int.parse(b.nome.split('_').last);
+
+            return numA.compareTo(numB);
+          });
           break;
-        case TipoOrdem.nomeZa:
-          fotos.sort((a, b) => b.nome.compareTo(a.nome));
+        case TipoOrdem.decrescente:
+          fotos.sort((a, b) {
+            int numA = int.parse(a.nome.split('_').last);
+            int numB = int.parse(b.nome.split('_').last);
+            return numB.compareTo(numA);
+          });
           break;
       }
     });
@@ -161,12 +172,12 @@ class _GaleriaState extends State<Galeria> {
               ),
               const PopupMenuDivider(),
               const PopupMenuItem<TipoOrdem>(
-                value: TipoOrdem.nomeAz,
-                child: Text('Nome (A-Z)'),
+                value: TipoOrdem.crescente,
+                child: Text('Crescente'),
               ),
               const PopupMenuItem<TipoOrdem>(
-                value: TipoOrdem.nomeZa,
-                child: Text('Nome (Z-A)'),
+                value: TipoOrdem.decrescente,
+                child: Text('Decrescente'),
               ),
             ],
           ),

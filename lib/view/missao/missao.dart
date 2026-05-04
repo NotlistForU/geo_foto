@@ -40,7 +40,7 @@ class _MissaoState extends State<Missao> {
     // salvar no álbum
     final result = await FotoMissao.gerar();
     final missao = await select.Missao.missaoAtiva();
-    final nomeAlbum = 'Sipam-${missao!.nome}';
+    final nomeAlbum = 'Sipam-${missao!.id}';
     final asset = await PhotoManager.editor.saveImage(
       bytes,
       filename: '${result.nomeArquivo}.png',
