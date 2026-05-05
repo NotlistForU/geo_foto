@@ -44,8 +44,8 @@ class _FotoState extends State<Foto> {
   @override
   Widget build(BuildContext context) {
     final fotoAtual = widget.fotos[_currentIndex];
-    final dataFormatada = DateFormat('dd/MM/yyyy').format(fotoAtual.data);
-
+    final dataFormatada = DateFormat('dd MMM yyyy').format(fotoAtual.data);
+    final horaFormatada = DateFormat('HH:mm').format(fotoAtual.data);
     return ExtendedImageSlidePage(
       key: const Key('tela_foto_slide'),
       slidePageBackgroundHandler: (offset, pageSize) {
@@ -63,11 +63,39 @@ class _FotoState extends State<Foto> {
         extendBody: true,
         appBar: AppBar(
           backgroundColor: Colors.black.withValues(alpha: 0.3),
-          title: Text(
-            widget.fotosSelecionadas.isNotEmpty
-                ? '${widget.fotosSelecionadas.length}  ${widget.fotosSelecionadas.length > 1 ? "selecionadas" : "selecionada"}'
-                : dataFormatada,
-          ),
+          title: widget.fotosSelecionadas.isNotEmpty
+              ? Text(
+                  '${widget.fotosSelecionadas.length} '
+                  '${widget.fotosSelecionadas.length > 1 ? "selecionadas" : "selecionada"}',
+                )
+              : Row(
+                  children: [
+                    // ESQUERDA (data + hora)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(dataFormatada, style: TextStyle(fontSize: 14)),
+                        Text(
+                          horaFormatada,
+                          style: TextStyle(fontSize: 12, color: Colors.white70),
+                        ),
+                      ],
+                    ),
+                    Spacer(),
+                    Expanded(
+                      child: Text(
+                        fotoAtual.nome,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
           elevation: 0,
         ),
         body: ExtendedImageGesturePageView.builder(
