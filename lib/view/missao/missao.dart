@@ -12,6 +12,7 @@ import 'package:sipam_foto/database/missoes/select.dart' as select;
 import 'package:sipam_foto/model/missao.dart' as model;
 import 'package:sipam_foto/view/missao/lista.dart';
 import 'package:sipam_foto/view/galeria/page.dart' as page;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Missao extends StatefulWidget {
   const Missao({super.key});
@@ -22,6 +23,7 @@ class Missao extends StatefulWidget {
 
 class _MissaoState extends State<Missao> {
   late Future<List<model.Missao>> missoesFuture;
+  bool _preencherLacunas = true;
 
   @override
   void initState() {
@@ -33,12 +35,64 @@ class _MissaoState extends State<Missao> {
     missoesFuture = select.Missao.todasMissoes();
   }
 
+  void _abrirCamera(int missaoId) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => cam.CameraOverlay(
+          titulo: "Câmera",
+          anguloRotacaoDireita: -90,
+          anguloRotacaoEsquerda: 90,
+          temBotaoGoogleMaps: true,
+          temBotaoGaleria: true,
+          temMiniMapa: true,
+          configsExtras: [
+            StatefulBuilder(
+              builder: (context, setLocalState) {
+                return Tooltip(
+                  message:
+                      "Fotos novas usam números de arquivos que foram apagados.",
+                  child: SwitchListTile(
+                    title: const Text('Preencher lacunas'),
+                    value: _preencherLacunas,
+                    onChanged: (val) {
+                      setLocalState(() => _preencherLacunas = val);
+                      setState(() => _preencherLacunas = val);
+                    },
+                  ),
+                );
+              },
+            ),
+          ],
+          onFotoFinal: (bytes, localizacao) async {
+            if (localizacao == null) return;
+            final locApp = model.Localizacao.fromCamera(localizacao);
+            await salvarFotoDaMissao(
+              preencherLacunas: _preencherLacunas,
+              missaoId: missaoId,
+              bytes: bytes,
+              localizacao: locApp,
+            );
+          },
+          onAbrirGaleria: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const page.Galeria()),
+            );
+          },
+        ),
+      ),
+    ).then((_) => setState(() => _reloadMissoes()));
+  }
+
   Future<void> salvarFotoDaMissao({
     required Uint8List bytes,
+    required bool preencherLacunas,
+    required int missaoId,
     model.Localizacao? localizacao,
   }) async {
     // salvar no álbum
-    final result = await FotoMissao.gerar();
+    final result = await FotoMissao.gerar(preencherLacunas);
     final missao = await select.Missao.missaoAtiva();
     final nomeAlbum = 'Sipam-${missao!.id}';
     final asset = await PhotoManager.editor.saveImage(
@@ -47,12 +101,17 @@ class _MissaoState extends State<Missao> {
       title: result.nomeArquivo,
       relativePath: 'Pictures/$nomeAlbum',
     );
+    final num = await FotoMissao.getProximoNumero(
+      missaoId: missaoId,
+      preencherLacunas: preencherLacunas,
+    );
 
     // salvar no banco
     await insert.Foto.values(
       missaoid: result.missaoid,
+      numero: num,
       nome: result.nomeArquivo,
-      asset_id: asset.id,
+      assetId: asset.id,
       latitude: localizacao?.lat,
       longitude: localizacao?.log,
       altitude: localizacao?.alt,
@@ -121,49 +180,8 @@ class _MissaoState extends State<Missao> {
                 if (!c.mounted) return;
                 Navigator.pop(c);
                 if (ativarAgora) {
-                  Navigator.push(
-                    c,
-                    MaterialPageRoute(
-                      builder: (_) => cam.CameraOverlay(
-                        titulo: "Câmera",
-                        anguloRotacaoDireita: -90,
-                        anguloRotacaoEsquerda: 90,
-                        temBotaoGoogleMaps: true,
-                        temBotaoGaleria: true,
-                        temMiniMapa: true,
-                        onFotoFinal: (bytes, localizacao) async {
-                          final model.Missao? missaoAtiva =
-                              await select.Missao.missaoAtiva();
-                          if (missaoAtiva == null) return;
-                          if (localizacao == null) return;
-                          final locApp = model.Localizacao.fromCamera(
-                            localizacao,
-                          );
-
-                          await salvarFotoDaMissao(
-                            bytes: bytes,
-                            localizacao: locApp,
-                          );
-                        },
-                        onAbrirGaleria: () async {
-                          debugPrint('botao galeria clicado');
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const page.Galeria(),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  );
-                  setState(() {
-                    _reloadMissoes();
-                  });
-                } else {
-                  setState(() {
-                    _reloadMissoes();
-                  });
+                  final missaoAtiva = await select.Missao.missaoAtiva();
+                  if (missaoAtiva != null) _abrirCamera(missaoAtiva.id);
                 }
               },
               child: const Text('Criar'),
@@ -216,39 +234,7 @@ class _MissaoState extends State<Missao> {
                 onTap: () async {
                   await update.Missao.ativar(missao);
                   if (!c.mounted) return;
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => cam.CameraOverlay(
-                        titulo: "Câmera",
-                        temBotaoGoogleMaps: true,
-                        temBotaoGaleria: true,
-                        temMiniMapa: true,
-                        onFotoFinal: (bytes, localizacao) async {
-                          if (localizacao == null) return;
-                          final locApp = model.Localizacao.fromCamera(
-                            localizacao,
-                          );
-                          await salvarFotoDaMissao(
-                            bytes: bytes,
-                            localizacao: locApp,
-                          );
-                        },
-                        onAbrirGaleria: () async {
-                          debugPrint('botao galeria clicado');
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const page.Galeria(),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  );
-                  setState(() {
-                    _reloadMissoes();
-                  });
+                  _abrirCamera(missao.id);
                 },
               );
             },

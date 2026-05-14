@@ -19,18 +19,70 @@ class FotoMissao {
     return '${nome.toLowerCase().replaceAll(' ', '_')}-$temp';
   }
 
-  static Future<FotoMissao> gerar() async {
+  static Future<FotoMissao> gerar(bool preencherLacunas) async {
     final db = await Create.database;
     final missao = await isAtiva(db);
 
-    final missaoid = missao['id'] as int;
+    final missaoId = missao['id'] as int;
     final nome = missao['nome'] as String;
 
-    final num = await update.Missao.incrementarContador();
+    int num = await getProximoNumero(
+      missaoId: missaoId,
+      preencherLacunas: preencherLacunas,
+    );
 
     return FotoMissao(
-      missaoid: missaoid,
+      missaoid: missaoId,
       nomeArquivo: FotoMissao.rotulo(nome, num),
     );
+  }
+
+  static Future<int> proximoNumeroSequencial(int missaoId) async {
+    final db = await Create.database;
+
+    final result = await db.rawQuery(
+      'SELECT MAX(numero) as max FROM fotos WHERE missao_id =?',
+      [missaoId],
+    );
+
+    final max = result.first['max'] as int?;
+
+    return (max ?? 0) + 1;
+  }
+
+  static Future<int> proximoNumeroPreenchendo(int missaoId) async {
+    final db = await Create.database;
+
+    final result = await db.query(
+      'fotos',
+      columns: ['numero'],
+      where: 'missao_id = ?',
+      whereArgs: [missaoId],
+      orderBy: 'numero ASC',
+    );
+
+    int esperado = 1;
+
+    for (final row in result) {
+      final numero = row['numero'] as int;
+
+      if (numero != esperado) {
+        return esperado;
+      }
+
+      esperado++;
+    }
+    return esperado;
+  }
+
+  static Future<int> getProximoNumero({
+    required int missaoId,
+    required bool preencherLacunas,
+  }) async {
+    if (preencherLacunas) {
+      return proximoNumeroPreenchendo(missaoId);
+    } else {
+      return proximoNumeroSequencial(missaoId);
+    }
   }
 }

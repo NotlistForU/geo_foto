@@ -64,16 +64,16 @@ class _GaleriaState extends State<Galeria> {
           break;
         case TipoOrdem.crescente:
           fotos.sort((a, b) {
-            int numA = int.parse(a.nome.split('_').last);
-            int numB = int.parse(b.nome.split('_').last);
+            int numA = int.parse(a.nome.split('-').last);
+            int numB = int.parse(b.nome.split('-').last);
 
             return numA.compareTo(numB);
           });
           break;
         case TipoOrdem.decrescente:
           fotos.sort((a, b) {
-            int numA = int.parse(a.nome.split('_').last);
-            int numB = int.parse(b.nome.split('_').last);
+            int numA = int.parse(a.nome.split('-').last);
+            int numB = int.parse(b.nome.split('-').last);
             return numB.compareTo(numA);
           });
           break;

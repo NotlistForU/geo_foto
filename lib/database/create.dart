@@ -28,11 +28,13 @@ class Create {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         data_criacao INTEGER NOT NULL,
         missao_id INTEGER NOT NULL,
+        numero INTEGER NOT NULL,
         nome TEXT NOT NULL,
         asset_id TEXT NOT NULL,
         latitude REAL,
         longitude REAL,
         altitude REAL,
+        UNIQUE (missao_id, numero),
         FOREIGN KEY (missao_id) REFERENCES missoes(id)
       )
       ''');
