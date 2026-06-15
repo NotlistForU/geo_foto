@@ -39,47 +39,49 @@ class _MissaoState extends State<Missao> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => cam.CameraOverlay(
-          titulo: "Câmera",
-          anguloRotacaoDireita: -90,
-          anguloRotacaoEsquerda: 90,
-          temBotaoGoogleMaps: true,
-          temBotaoGaleria: true,
-          temMiniMapa: true,
-          configsExtras: [
-            StatefulBuilder(
-              builder: (context, setLocalState) {
-                return Tooltip(
-                  message:
-                      "Fotos novas usam números de arquivos que foram apagados.",
-                  child: SwitchListTile(
-                    title: const Text('Preencher lacunas'),
-                    value: _preencherLacunas,
-                    onChanged: (val) {
-                      setLocalState(() => _preencherLacunas = val);
-                      setState(() => _preencherLacunas = val);
-                    },
-                  ),
-                );
-              },
-            ),
-          ],
-          onFotoFinal: (bytes, localizacao) async {
-            if (localizacao == null) return;
-            final locApp = model.Localizacao.fromCamera(localizacao);
-            await salvarFotoDaMissao(
-              preencherLacunas: _preencherLacunas,
-              missaoId: missaoId,
-              bytes: bytes,
-              localizacao: locApp,
-            );
-          },
-          onAbrirGaleria: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const page.Galeria()),
-            );
-          },
+        builder: (_) => SafeArea(
+          child: cam.CameraOverlay(
+            titulo: "Câmera",
+            anguloRotacaoDireita: -90,
+            anguloRotacaoEsquerda: 90,
+            temBotaoGoogleMaps: true,
+            temBotaoGaleria: true,
+            temMiniMapa: true,
+            configsExtras: [
+              StatefulBuilder(
+                builder: (context, setLocalState) {
+                  return Tooltip(
+                    message:
+                        "Fotos novas usam números de arquivos que foram apagados.",
+                    child: SwitchListTile(
+                      title: const Text('Preencher lacunas'),
+                      value: _preencherLacunas,
+                      onChanged: (val) {
+                        setLocalState(() => _preencherLacunas = val);
+                        setState(() => _preencherLacunas = val);
+                      },
+                    ),
+                  );
+                },
+              ),
+            ],
+            onFotoFinal: (bytes, localizacao) async {
+              if (localizacao == null) return;
+              final locApp = model.Localizacao.fromCamera(localizacao);
+              await salvarFotoDaMissao(
+                preencherLacunas: _preencherLacunas,
+                missaoId: missaoId,
+                bytes: bytes,
+                localizacao: locApp,
+              );
+            },
+            onAbrirGaleria: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const page.Galeria()),
+              );
+            },
+          ),
         ),
       ),
     ).then((_) => setState(() => _reloadMissoes()));
