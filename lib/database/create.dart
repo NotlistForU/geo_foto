@@ -43,15 +43,14 @@ class Create {
         await db.execute('''
           CREATE TABLE pontos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
             missao_id INTEGER NOT NULL,
             numero INTEGER NOT NULL,
             data_criacao INTEGER NOT NULL,
             latitude REAL NOT NULL,
             longitude REAL NOT NULL,
             altitude REAL NOT NULL,
-
             UNIQUE (missao_id, numero),
-
             FOREIGN KEY (missao_id)
               REFERENCES missoes(id)
               ON DELETE CASCADE

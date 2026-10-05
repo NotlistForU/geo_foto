@@ -1,28 +1,29 @@
-class Foto {
+class FotoModel {
   final int id;
   final DateTime data;
-  final int missaoId;
+  final int pontoId;
   final int numero;
   final String nome;
   final double? latitude;
   final double? longitude;
   final double? altitude;
-  Foto({
+
+  FotoModel({
     required this.id,
     required this.data,
-    required this.missaoId,
+    required this.pontoId,
     required this.numero,
     required this.nome,
     this.latitude,
     this.longitude,
     this.altitude,
   });
-  // construtor  quando vem do banco de dados
-  factory Foto.fromMap(Map<String, dynamic> map) {
-    return Foto(
+
+  factory FotoModel.fromMap(Map<String, dynamic> map) {
+    return FotoModel(
       id: map['id'] as int,
       data: DateTime.fromMillisecondsSinceEpoch(map['data_criacao'] as int),
-      missaoId: map['missao_id'] as int,
+      pontoId: map['ponto_id'] as int,
       numero: map['numero'] as int,
       nome: map['nome'] as String,
       latitude: (map['latitude'] as num?)?.toDouble(),
@@ -30,11 +31,11 @@ class Foto {
       altitude: (map['altitude'] as num?)?.toDouble(),
     );
   }
-  // converter para quando vai para o banco
+
   Map<String, dynamic> toMap() {
     return {
       'data_criacao': data.millisecondsSinceEpoch,
-      'missao_id': missaoId,
+      'ponto_id': pontoId,
       'numero': numero,
       'nome': nome,
       'latitude': latitude,
