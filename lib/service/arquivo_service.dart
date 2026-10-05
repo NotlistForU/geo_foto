@@ -28,8 +28,9 @@ class ArquivoService {
     if (arquivos.isEmpty) {
       throw Exception('Nenhuma foto encontrada no armazenamento.');
     }
+    ShareParams params = ShareParams(files: arquivos);
 
-    await Share.shareXFiles(arquivos);
+    await SharePlus.instance.share(params);
   }
 
   //================ CRIAR MODEL + DIRETORIOS =======================================
