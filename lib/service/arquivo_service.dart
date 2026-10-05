@@ -204,6 +204,34 @@ class ArquivoService {
     return arquivo;
   }
 
+  //============================ GET's ================================================
+  static Future<File?> getFoto(FotoModel foto) async {
+    final ponto = await PontoModel.buscarPorId(foto.pontoId);
+
+    if (ponto == null) {
+      return null;
+    }
+
+    final missao = await MissaoModel.buscarPorId(ponto.missaoId);
+
+    if (missao == null) {
+      return null;
+    }
+
+    final diretorio = await criarDiretorioPonto(
+      nomeMissao: missao.nome,
+      nomePonto: ponto.nome,
+    );
+
+    final arquivo = File('${diretorio.path}/${foto.nome}');
+
+    if (await arquivo.exists()) {
+      return arquivo;
+    }
+
+    return null;
+  }
+
   //============================ UTIL =================================================
   static String normalizarNome(String nome) {
     var resultado = nome.toLowerCase();
