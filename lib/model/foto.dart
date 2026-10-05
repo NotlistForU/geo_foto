@@ -4,7 +4,6 @@ class Foto {
   final int missaoId;
   final int numero;
   final String nome;
-  final String assetId;
   final double? latitude;
   final double? longitude;
   final double? altitude;
@@ -14,7 +13,6 @@ class Foto {
     required this.missaoId,
     required this.numero,
     required this.nome,
-    required this.assetId,
     this.latitude,
     this.longitude,
     this.altitude,
@@ -27,7 +25,6 @@ class Foto {
       missaoId: map['missao_id'] as int,
       numero: map['numero'] as int,
       nome: map['nome'] as String,
-      assetId: map['asset_id'] as String,
       latitude: (map['latitude'] as num?)?.toDouble(),
       longitude: (map['longitude'] as num?)?.toDouble(),
       altitude: (map['altitude'] as num?)?.toDouble(),
@@ -40,7 +37,6 @@ class Foto {
       'missao_id': missaoId,
       'numero': numero,
       'nome': nome,
-      'asset_id': assetId,
       'latitude': latitude,
       'longitude': longitude,
       'altitude': altitude,

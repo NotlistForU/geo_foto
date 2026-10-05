@@ -2,17 +2,15 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:camera_overlay/camera_overlay.dart' as cam;
-import 'package:photo_manager/photo_manager.dart';
-import 'package:sipam_foto/database/juntos/foto_missao.dart';
 import 'package:sipam_foto/model/localizacao.dart' as model;
-import 'package:sipam_foto/database/fotos/insert.dart' as insert;
 import 'package:sipam_foto/database/missoes/update.dart' as update;
 import 'package:sipam_foto/database/missoes/insert.dart' as insert;
 import 'package:sipam_foto/database/missoes/select.dart' as select;
 import 'package:sipam_foto/model/missao.dart' as model;
 import 'package:sipam_foto/view/missao/lista.dart';
 import 'package:sipam_foto/view/galeria/page.dart' as page;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sipam_foto/view/mapa/mapa_page.dart' as page;
+import 'package:sipam_foto/service/foto_service.dart' as service;
 
 class Missao extends StatefulWidget {
   const Missao({super.key});
@@ -22,8 +20,8 @@ class Missao extends StatefulWidget {
 }
 
 class _MissaoState extends State<Missao> {
+  final service.FotoService _fotoService = service.FotoService();
   late Future<List<model.Missao>> missoesFuture;
-  bool _preencherLacunas = true;
 
   @override
   void initState() {
@@ -47,29 +45,10 @@ class _MissaoState extends State<Missao> {
             temBotaoGoogleMaps: true,
             temBotaoGaleria: true,
             temMiniMapa: true,
-            configsExtras: [
-              StatefulBuilder(
-                builder: (context, setLocalState) {
-                  return Tooltip(
-                    message:
-                        "Fotos novas usam números de arquivos que foram apagados.",
-                    child: SwitchListTile(
-                      title: const Text('Preencher lacunas'),
-                      value: _preencherLacunas,
-                      onChanged: (val) {
-                        setLocalState(() => _preencherLacunas = val);
-                        setState(() => _preencherLacunas = val);
-                      },
-                    ),
-                  );
-                },
-              ),
-            ],
             onFotoFinal: (bytes, localizacao) async {
               if (localizacao == null) return;
               final locApp = model.Localizacao.fromCamera(localizacao);
-              await salvarFotoDaMissao(
-                preencherLacunas: _preencherLacunas,
+              await _fotoService.salvarFoto(
                 missaoId: missaoId,
                 bytes: bytes,
                 localizacao: locApp,
@@ -85,39 +64,6 @@ class _MissaoState extends State<Missao> {
         ),
       ),
     ).then((_) => setState(() => _reloadMissoes()));
-  }
-
-  Future<void> salvarFotoDaMissao({
-    required Uint8List bytes,
-    required bool preencherLacunas,
-    required int missaoId,
-    model.Localizacao? localizacao,
-  }) async {
-    // salvar no álbum
-    final result = await FotoMissao.gerar(preencherLacunas);
-    final missao = await select.Missao.missaoAtiva();
-    final nomeAlbum = 'Sipam-${missao!.id}';
-    final asset = await PhotoManager.editor.saveImage(
-      bytes,
-      filename: '${result.nomeArquivo}.png',
-      title: result.nomeArquivo,
-      relativePath: 'Pictures/$nomeAlbum',
-    );
-    final num = await FotoMissao.getProximoNumero(
-      missaoId: missaoId,
-      preencherLacunas: preencherLacunas,
-    );
-
-    // salvar no banco
-    await insert.Foto.values(
-      missaoid: result.missaoid,
-      numero: num,
-      nome: result.nomeArquivo,
-      assetId: asset.id,
-      latitude: localizacao?.lat,
-      longitude: localizacao?.log,
-      altitude: localizacao?.alt,
-    );
   }
 
   void _openModal() {
@@ -202,11 +148,22 @@ class _MissaoState extends State<Missao> {
         actions: [
           IconButton(
             icon: const Icon(Icons.photo_library),
+            tooltip: 'Galeria',
             onPressed: () {
               debugPrint('Botão galeria clicado');
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const page.Galeria()),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.map),
+            tooltip: 'Mapa',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const page.MapaPage()),
               );
             },
           ),
@@ -230,8 +187,9 @@ class _MissaoState extends State<Missao> {
             itemCount: missoes.length,
             itemBuilder: (c, index) {
               final missao = missoes[index];
+              final nomeWithId = "${missao.nome} ID: ${missao.id}";
               return Lista(
-                nome: missao.nome,
+                nome: nomeWithId,
                 ativa: missao.ativa,
                 onTap: () async {
                   await update.Missao.ativar(missao);

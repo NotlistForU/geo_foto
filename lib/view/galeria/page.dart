@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sipam_foto/view/galeria/foto.dart' as galeria_foto;
@@ -5,12 +7,15 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:sipam_foto/model/foto.dart' as model;
 import 'package:sipam_foto/model/filtro.dart' as model;
+import 'package:sipam_foto/view/galeria/modal.dart' as modal;
+import 'package:sipam_foto/model/foto_com_arquivo.dart' as model;
 import 'package:sipam_foto/database/fotos/select.dart' as select;
 import 'package:sipam_foto/database/fotos/delete.dart' as delete;
+import 'package:sipam_foto/service/foto_service.dart' as service;
 import 'package:sipam_foto/view/galeria/thumbnail.dart';
-import 'package:sipam_foto/view/galeria/modal.dart' as modal;
 
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sipam_foto/view/galeria/utils.dart';
 
 class Galeria extends StatefulWidget {
   const Galeria({super.key});
@@ -21,11 +26,12 @@ class Galeria extends StatefulWidget {
 enum TipoOrdem { maisRecente, maisAntigas, crescente, decrescente }
 
 class _GaleriaState extends State<Galeria> {
+  final service.FotoService _fotoService = service.FotoService();
   TipoOrdem _ordemAtual = TipoOrdem.maisRecente;
   bool loading = true;
   List<model.Foto> fotos = [];
   List<model.Foto> fotosSelecionadas = [];
-  Map<String, AssetEntity> assets = {};
+  Map<int, File> arquivos = {};
   model.Filtro filtroAtual = model.Filtro.empty;
 
   @override
@@ -63,19 +69,10 @@ class _GaleriaState extends State<Galeria> {
           fotos.sort((a, b) => a.data.compareTo(b.data));
           break;
         case TipoOrdem.crescente:
-          fotos.sort((a, b) {
-            int numA = int.parse(a.nome.split('-').last);
-            int numB = int.parse(b.nome.split('-').last);
-
-            return numA.compareTo(numB);
-          });
+          fotos.sort((a, b) => a.numero.compareTo(b.numero));
           break;
         case TipoOrdem.decrescente:
-          fotos.sort((a, b) {
-            int numA = int.parse(a.nome.split('-').last);
-            int numB = int.parse(b.nome.split('-').last);
-            return numB.compareTo(numA);
-          });
+          fotos.sort((a, b) => b.numero.compareTo(a.numero));
           break;
       }
     });
@@ -83,36 +80,27 @@ class _GaleriaState extends State<Galeria> {
 
   Future<void> carregarGaleria() async {
     setState(() => loading = true);
-    final permissao = await PhotoManager.requestPermissionExtend();
-    if (!permissao.isAuth) {
-      setState(() {
-        setState(() => loading = false);
-        return;
-      });
+
+    final resultado = await _fotoService.listarFotos(filtroAtual);
+
+    final List<model.Foto> listFotos = [];
+    final Map<int, File> mapArquivos = {};
+
+    for (final registro in resultado) {
+      listFotos.add(registro.foto);
+      mapArquivos[registro.foto.id] = registro.arquivo;
     }
-    await PhotoManager.clearFileCache();
-    await PhotoManager.releaseCache();
+    PaintingBinding.instance.imageCache.clear();
+    PaintingBinding.instance.imageCache.clearLiveImages();
 
-    fotos = await select.Foto.filtro(filtroAtual);
-
-    final Map<String, AssetEntity> temp = {};
-
-    List<model.Foto> fotosValidas = [];
-
-    for (final foto in fotos) {
-      final asset = await AssetEntity.fromId(foto.assetId);
-      if (asset != null) {
-        temp[foto.assetId] = asset;
-        fotosValidas.add(foto);
-      } else {
-        await delete.Foto.uma(foto);
-      }
-    }
-
-    assets = temp;
-    fotos = fotosValidas;
-
-    setState(() => loading = false);
+    setState(() {
+      _ordemAtual = TipoOrdem.maisRecente;
+      fotosSelecionadas.clear();
+      fotos = listFotos;
+      arquivos = mapArquivos;
+      loading = false;
+    });
+    _ordenarLista(_ordemAtual);
   }
 
   @override
@@ -135,6 +123,14 @@ class _GaleriaState extends State<Galeria> {
               : '${fotosSelecionadas.length}  ${fotosSelecionadas.length > 1 ? "selecionadas" : "selecionada"}',
         ),
         actions: [
+          IconButton(
+            tooltip: 'Sincronizar galeria',
+            icon: const Icon(Icons.sync),
+            onPressed: () async {
+              await _fotoService.renumerarTodasMissoes();
+              await carregarGaleria();
+            },
+          ),
           if (fotos.length != fotosSelecionadas.length)
             IconButton(
               icon: const Icon(Icons.select_all),
@@ -148,7 +144,17 @@ class _GaleriaState extends State<Galeria> {
           if (fotosSelecionadas.isNotEmpty)
             IconButton(
               onPressed: () async {
+                final confirmar = await confirmarExclusao(
+                  context,
+                  mensagem:
+                      'Deseja realmente excluir ${fotosSelecionadas.length} foto(s)?',
+                );
+
+                if (!confirmar) return;
+
                 await delete.Foto.varias(fotosSelecionadas);
+                await carregarGaleria();
+
                 if (fotos.isEmpty) {
                   if (context.mounted) {
                     Navigator.pop(context, true);
@@ -156,6 +162,13 @@ class _GaleriaState extends State<Galeria> {
                 }
               },
               icon: const Icon(Icons.delete),
+            ),
+          if (fotosSelecionadas.isNotEmpty)
+            IconButton(
+              onPressed: () async {
+                await service.FotoService.compartilharFotos(fotosSelecionadas);
+              },
+              icon: Icon(Icons.share, color: Colors.white),
             ),
           PopupMenuButton<TipoOrdem>(
             icon: const Icon(Icons.sort),
@@ -224,8 +237,8 @@ class _GaleriaState extends State<Galeria> {
         itemCount: fotos.length,
         itemBuilder: (c, index) {
           final foto = fotos[index];
-          final asset = assets[foto.assetId];
-          if (asset == null) {
+          final arquivo = arquivos[foto.id];
+          if (arquivo == null) {
             return const SizedBox.shrink();
           }
           return GestureDetector(
@@ -247,7 +260,7 @@ class _GaleriaState extends State<Galeria> {
                       false, // <-- É isso aqui que deixa o fundo transparente!
                   pageBuilder: (context, animation, secondaryAnimation) =>
                       galeria_foto.Foto(
-                        assets: assets,
+                        arquivos: arquivos,
                         fotos: fotos,
                         fotosSelecionadas: fotosSelecionadas,
                         initialIndex: index,
@@ -259,7 +272,7 @@ class _GaleriaState extends State<Galeria> {
               }
             },
             child: Thumbnail(
-              asset: asset,
+              arquivo: arquivo,
               foto: foto,
               isSelected: fotosSelecionadas.contains(foto),
               isSelectionMode: fotosSelecionadas.isNotEmpty,

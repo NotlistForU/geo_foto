@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:photo_manager/photo_manager.dart';
@@ -5,14 +7,14 @@ import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
 import 'package:sipam_foto/model/foto.dart' as model;
 
 class Thumbnail extends StatelessWidget {
-  final AssetEntity asset;
+  final File arquivo;
   final model.Foto foto;
   final bool isSelected;
   final bool isSelectionMode;
   final VoidCallback? onSelectToggle;
   const Thumbnail({
     super.key,
-    required this.asset,
+    required this.arquivo,
     required this.foto,
     this.isSelected = false,
     this.isSelectionMode = false,
@@ -34,12 +36,7 @@ class Thumbnail extends StatelessWidget {
             children: [
               // 🖼️ imagem SEMPRE presente
               Positioned.fill(
-                child: AssetEntityImage(
-                  asset,
-                  isOriginal: false,
-                  thumbnailSize: const ThumbnailSize.square(300),
-                  fit: BoxFit.cover,
-                ),
+                child: Image.file(arquivo, fit: BoxFit.cover, cacheWidth: 300),
               ),
 
               // 🔵 overlay de seleção (opcional, mas bonito)
@@ -56,8 +53,8 @@ class Thumbnail extends StatelessWidget {
                   child: GestureDetector(
                     onTap: onSelectToggle,
                     child: Container(
-                      width: 24,
-                      height: 24,
+                      width: 60,
+                      height: 60,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: isSelected ? Colors.blue : Colors.black45,

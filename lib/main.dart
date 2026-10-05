@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sipam_foto/view/missao/missao.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:sipam_foto/view/mapa/mapa_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

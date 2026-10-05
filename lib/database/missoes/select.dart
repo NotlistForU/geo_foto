@@ -3,27 +3,34 @@ import 'package:sipam_foto/database/util/queries.dart';
 import 'package:sipam_foto/model/missao.dart' as model;
 
 class Missao {
+  static Future<model.Missao?> getMissaoById(int missaoId) async {
+    final db = await Create.database;
+
+    final result = await db.query(
+      'missoes',
+      where: 'id = ?',
+      whereArgs: [missaoId],
+      limit: 1,
+    );
+
+    if (result.isEmpty) {
+      return null;
+    }
+
+    return model.Missao.fromMap(result.first);
+  }
+
   static Future<model.Missao?> missaoAtiva() async {
     final db = await Create.database;
     final missao = await isAtiva(db);
-    return model.Missao(
-      id: missao['id'] as int,
-      data: DateTime.fromMillisecondsSinceEpoch(missao['data_criacao'] as int),
-      nome: missao['nome'] as String,
-      ativa: true,
-    );
+    return model.Missao.fromMap(missao);
   }
 
   static Future<List<model.Missao>> todasMissoes() async {
     final db = await Create.database;
     final result = await db.query('missoes', orderBy: 'data_criacao DESC');
     return result.map((e) {
-      return model.Missao(
-        id: e['id'] as int,
-        data: DateTime.fromMillisecondsSinceEpoch(e['data_criacao'] as int),
-        nome: e['nome'] as String,
-        ativa: (e['ativa'] as int) == 1,
-      );
+      return model.Missao.fromMap(e);
     }).toList();
   }
 
@@ -36,21 +43,5 @@ class Missao {
       limit: 1,
     );
     return result.isEmpty;
-  }
-
-  static Future<int> contadorAtual(int id) async {
-    final db = await Create.database;
-    final result = await db.query(
-      'missoes',
-      columns: ['contador'],
-      where: 'id = ?',
-      whereArgs: [id],
-      limit: 1,
-    );
-    if (result.isEmpty) {
-      throw Exception('Missão não encontrada');
-    }
-
-    return result.first['contador'] as int;
   }
 }

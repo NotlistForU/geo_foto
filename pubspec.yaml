@@ -35,7 +35,7 @@ dependencies:
   camera_overlay:
     git:
       url: https://github.com/NotlistForU/camera_overlay.git
-      ref: main
+      ref: cc750c4
 
   # abrir URLs
   url_launcher: 6.3.2
@@ -54,7 +54,7 @@ dependencies:
   geolocator: 14.0.2
 
   # Acesso a diretórios temporários
-  path_provider: ^2.1.5
+  path_provider: ^2.1.6
 
   # Permissões em runtime
   permission_handler: ^12.0.1
@@ -72,7 +72,7 @@ dependencies:
 
   # Banco de dados
   sqflite: 2.4.2
-  path: 1.9.1
+  path: ^1.9.1
 
   # Armazenamento local de valores de variaveis.
   shared_preferences: ^2.5.5
@@ -81,6 +81,8 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  archive: ^4.3.0
+  file_picker: ^11.0.3
 
 dev_dependencies:
   flutter_test:

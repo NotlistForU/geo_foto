@@ -10,6 +10,19 @@ class Foto {
     return result.map((e) => model.Foto.fromMap(e)).toList();
   }
 
+  static Future<int> proximoNumeroSequencial(int missaoId) async {
+    final db = await Create.database;
+
+    final result = await db.rawQuery(
+      'SELECT MAX(numero) as max FROM fotos WHERE missao_id =?',
+      [missaoId],
+    );
+
+    final max = result.first['max'] as int?;
+
+    return (max ?? 0) + 1;
+  }
+
   static Future<List<model.Foto>> filtro(model.Filtro filtro) async {
     // FILTRO POR...
     final db = await Create.database;
@@ -67,6 +80,19 @@ class Foto {
       where: where.isEmpty ? null : where.join(' AND '),
       whereArgs: args,
       orderBy: 'data_criacao DESC',
+    );
+
+    return result.map((e) => model.Foto.fromMap(e)).toList();
+  }
+
+  static Future<List<model.Foto>> porIdMissao(int missaoId) async {
+    final db = await Create.database;
+
+    final result = await db.query(
+      'fotos',
+      where: 'missao_id = ?',
+      whereArgs: [missaoId],
+      orderBy: 'numero ASC',
     );
 
     return result.map((e) => model.Foto.fromMap(e)).toList();
