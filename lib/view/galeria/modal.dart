@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:sipam_foto/database/missoes/select.dart' as select;
 import 'package:sipam_foto/model/filtro.dart' as model;
-import 'package:sipam_foto/model/missao.dart' as model;
+import 'package:sipam_foto/model/missao_model.dart';
 
 class Filtros extends StatefulWidget {
   final model.Filtro filtro;
@@ -19,7 +18,7 @@ class _FiltrosState extends State<Filtros> {
   double _min = 0;
   double _max = 2000;
   RangeValues _altitudeRange = const RangeValues(0, 2000);
-  List<model.Missao> missoes = [];
+  List<MissaoModel> missoes = [];
   bool loadingMissoes = true;
 
   @override
@@ -37,7 +36,7 @@ class _FiltrosState extends State<Filtros> {
   }
 
   Future<void> _loadMissoes() async {
-    final lista = await select.Missao.todasMissoes();
+    final lista = await MissaoModel.listar();
     setState(() {
       missoes = lista;
       loadingMissoes = false;

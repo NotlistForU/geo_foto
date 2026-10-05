@@ -4,8 +4,34 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sipam_foto/model/missao_model.dart';
 import 'package:sipam_foto/model/ponto_model.dart';
 import 'package:sipam_foto/model/foto_model.dart';
+import 'package:share_plus/share_plus.dart';
 
 class ArquivoService {
+  //================ COMPARTILHAR ARQUIVOS =========================================
+  static Future<void> compartilharFotos(int missaoId) async {
+    final fotos = await FotoModel.listarPorMissao(missaoId);
+
+    if (fotos.isEmpty) {
+      throw Exception('A missão não possui fotos.');
+    }
+
+    final arquivos = <XFile>[];
+
+    for (final foto in fotos) {
+      final arquivo = await getFoto(foto);
+
+      if (arquivo != null && await arquivo.exists()) {
+        arquivos.add(XFile(arquivo.path));
+      }
+    }
+
+    if (arquivos.isEmpty) {
+      throw Exception('Nenhuma foto encontrada no armazenamento.');
+    }
+
+    await Share.shareXFiles(arquivos);
+  }
+
   //================ CRIAR MODEL + DIRETORIOS =======================================
   static Future<MissaoModel> criarMissao({required String nome}) async {
     final missao = MissaoModel(

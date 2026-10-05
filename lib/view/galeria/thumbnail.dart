@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
-import 'package:sipam_foto/model/foto.dart' as model;
+import 'package:sipam_foto/model/foto_model.dart';
 
 class Thumbnail extends StatelessWidget {
   final File arquivo;
-  final model.Foto foto;
+  final FotoModel foto;
   final bool isSelected;
   final bool isSelectionMode;
   final VoidCallback? onSelectToggle;

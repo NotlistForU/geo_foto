@@ -5,13 +5,10 @@ import 'package:flutter/services.dart';
 import 'package:sipam_foto/view/galeria/foto.dart' as galeria_foto;
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:photo_manager/photo_manager.dart';
-import 'package:sipam_foto/model/foto.dart' as model;
+import 'package:sipam_foto/model/foto_model.dart';
 import 'package:sipam_foto/model/filtro.dart' as model;
 import 'package:sipam_foto/view/galeria/modal.dart' as modal;
-import 'package:sipam_foto/model/foto_com_arquivo.dart' as model;
-import 'package:sipam_foto/database/fotos/select.dart' as select;
-import 'package:sipam_foto/database/fotos/delete.dart' as delete;
-import 'package:sipam_foto/service/foto_service.dart' as service;
+import 'package:sipam_foto/service/arquivo_service.dart';
 import 'package:sipam_foto/view/galeria/thumbnail.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,11 +23,11 @@ class Galeria extends StatefulWidget {
 enum TipoOrdem { maisRecente, maisAntigas, crescente, decrescente }
 
 class _GaleriaState extends State<Galeria> {
-  final service.FotoService _fotoService = service.FotoService();
+  final service.ArquivoService _arquivoService = service.ArquivoService();
   TipoOrdem _ordemAtual = TipoOrdem.maisRecente;
   bool loading = true;
-  List<model.Foto> fotos = [];
-  List<model.Foto> fotosSelecionadas = [];
+  List<FotoModel> fotos = [];
+  List<FotoModel> fotosSelecionadas = [];
   Map<int, File> arquivos = {};
   model.Filtro filtroAtual = model.Filtro.empty;
 
@@ -81,9 +78,9 @@ class _GaleriaState extends State<Galeria> {
   Future<void> carregarGaleria() async {
     setState(() => loading = true);
 
-    final resultado = await _fotoService.listarFotos(filtroAtual);
+    final resultado = await _arquivoService.(filtroAtual);
 
-    final List<model.Foto> listFotos = [];
+    final List<FotoModel> listFotos = [];
     final Map<int, File> mapArquivos = {};
 
     for (final registro in resultado) {
@@ -127,7 +124,7 @@ class _GaleriaState extends State<Galeria> {
             tooltip: 'Sincronizar galeria',
             icon: const Icon(Icons.sync),
             onPressed: () async {
-              await _fotoService.renumerarTodasMissoes();
+              await _arquivoService.renumerarTodasMissoes();
               await carregarGaleria();
             },
           ),
@@ -166,7 +163,7 @@ class _GaleriaState extends State<Galeria> {
           if (fotosSelecionadas.isNotEmpty)
             IconButton(
               onPressed: () async {
-                await service.FotoService.compartilharFotos(fotosSelecionadas);
+                await ArquivoService.compartilharFotos(fotosSelecionadas);
               },
               icon: Icon(Icons.share, color: Colors.white),
             ),

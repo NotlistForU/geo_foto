@@ -4,16 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import 'package:extended_image/extended_image.dart';
-import 'package:sipam_foto/model/foto.dart' as model;
-import 'package:sipam_foto/database/fotos/delete.dart' as delete;
+import 'package:sipam_foto/model/foto_model.dart';
 import 'package:sipam_foto/view/galeria/utils.dart';
-import 'package:sipam_foto/service/foto_service.dart' as service;
+import 'package:sipam_foto/service/arquivo_service.dart';
 
 class Foto extends StatefulWidget {
   final Map<int, File> arquivos;
-  final List<model.Foto> fotos;
+  final List<FotoModel> fotos;
   final int initialIndex;
-  final List<model.Foto> fotosSelecionadas;
+  final List<FotoModel> fotosSelecionadas;
   const Foto({
     super.key,
     required this.arquivos,
@@ -143,7 +142,7 @@ class _FotoState extends State<Foto> {
             children: [
               IconButton(
                 onPressed: () async {
-                  await service.FotoService.compartilharFotos([fotoAtual]);
+                  await ArquivoService.compartilharFotos([fotoAtual]);
                 },
                 icon: Icon(Icons.share, color: Colors.white),
               ),
@@ -152,7 +151,7 @@ class _FotoState extends State<Foto> {
                 onPressed: () async {
                   final confirmar = await confirmarExclusao(context);
                   if (!confirmar) return;
-                  await delete.Foto.uma(fotoAtual);
+                  await FotoModel.delete(fotoAtual);
                   if (context.mounted) {
                     Navigator.pop(context, true);
                   }

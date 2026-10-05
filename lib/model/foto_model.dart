@@ -105,4 +105,45 @@ class FotoModel {
       altitude: altitude ?? this.altitude,
     );
   }
+
+  static Future<List<FotoModel>> listarTodas() async {
+    final db = await Create.database;
+
+    final resultado = await db.query(
+      'fotos',
+      orderBy: 'ponto_id ASC, numero ASC',
+    );
+
+    return resultado.map((map) => FotoModel.fromMap(map)).toList();
+  }
+
+  static Future<List<FotoModel>> listarPorPonto(int pontoId) async {
+    final db = await Create.database;
+
+    final resultado = await db.query(
+      'fotos',
+      where: 'ponto_id = ?',
+      whereArgs: [pontoId],
+      orderBy: 'numero ASC',
+    );
+
+    return resultado.map((map) => FotoModel.fromMap(map)).toList();
+  }
+
+  static Future<List<FotoModel>> listarPorMissao(int missaoId) async {
+    final db = await Create.database;
+
+    final resultado = await db.rawQuery(
+      '''
+    SELECT f.*
+    FROM fotos f
+    INNER JOIN pontos p ON p.id = f.ponto_id
+    WHERE p.missao_id = ?
+    ORDER BY p.numero ASC, f.numero ASC
+    ''',
+      [missaoId],
+    );
+
+    return resultado.map((map) => FotoModel.fromMap(map)).toList();
+  }
 }
