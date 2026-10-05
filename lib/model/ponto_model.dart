@@ -46,6 +46,28 @@ class PontoModel {
     };
   }
 
+  PontoModel copyWith({
+    int? id,
+    int? missaoId,
+    int? numero,
+    DateTime? data,
+    String? nome,
+    double? latitude,
+    double? longitude,
+    double? altitude,
+  }) {
+    return PontoModel(
+      id: id ?? this.id,
+      missaoId: missaoId ?? this.missaoId,
+      numero: numero ?? this.numero,
+      data: data ?? this.data,
+      nome: nome ?? this.nome,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      altitude: altitude ?? this.altitude,
+    );
+  }
+
   static Future<int> inserir(PontoModel ponto) async {
     final db = await Create.database;
 

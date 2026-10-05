@@ -1,3 +1,5 @@
+import 'package:sipam_foto/database/create.dart';
+
 class FotoModel {
   final int id;
   final DateTime data;
@@ -42,5 +44,65 @@ class FotoModel {
       'longitude': longitude,
       'altitude': altitude,
     };
+  }
+
+  static Future<int> inserir(FotoModel foto) async {
+    final db = await Create.database;
+
+    return await db.insert('fotos', foto.toMap());
+  }
+
+  static Future<FotoModel?> buscarPorId(int id) async {
+    final db = await Create.database;
+
+    final resultado = await db.query(
+      'fotos',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+
+    if (resultado.isEmpty) {
+      return null;
+    }
+
+    return FotoModel.fromMap(resultado.first);
+  }
+
+  static Future<int> obterProximoNumero(int pontoId) async {
+    final db = await Create.database;
+
+    final resultado = await db.rawQuery(
+      '''
+    SELECT COALESCE(MAX(numero), 0) + 1 AS proximo
+    FROM fotos
+    WHERE ponto_id = ?
+    ''',
+      [pontoId],
+    );
+
+    return resultado.first['proximo'] as int;
+  }
+
+  FotoModel copyWith({
+    int? id,
+    DateTime? data,
+    int? pontoId,
+    int? numero,
+    String? nome,
+    double? latitude,
+    double? longitude,
+    double? altitude,
+  }) {
+    return FotoModel(
+      id: id ?? this.id,
+      data: data ?? this.data,
+      pontoId: pontoId ?? this.pontoId,
+      numero: numero ?? this.numero,
+      nome: nome ?? this.nome,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      altitude: altitude ?? this.altitude,
+    );
   }
 }
