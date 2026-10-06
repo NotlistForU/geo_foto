@@ -1,4 +1,5 @@
 import 'package:sipam_foto/database/create.dart';
+import 'package:sipam_foto/model/filtro.dart';
 
 class FotoModel {
   final int id;
@@ -106,6 +107,43 @@ class FotoModel {
     );
   }
 
+  static Future<List<FotoModel>> listar(Filtro filtro) async {
+    final db = await Create.database;
+
+    final where = <String>[];
+    final args = <dynamic>[];
+
+    if (filtro.missaoId != null) {
+      where.add('p.missao_id = ?');
+      args.add(filtro.missaoId);
+    }
+
+    if (filtro.pontoId != null) {
+      where.add('f.ponto_id = ?');
+      args.add(filtro.pontoId);
+    }
+
+    if (filtro.inicio != null) {
+      where.add('f.data_criacao >= ?');
+      args.add(filtro.inicio!.millisecondsSinceEpoch);
+    }
+
+    if (filtro.fim != null) {
+      where.add('f.data_criacao <= ?');
+      args.add(filtro.fim!.millisecondsSinceEpoch);
+    }
+
+    final resultado = await db.rawQuery('''
+    SELECT f.*
+    FROM fotos f
+    INNER JOIN pontos p ON p.id = f.ponto_id
+    ${where.isNotEmpty ? 'WHERE ${where.join(' AND ')}' : ''}
+    ORDER BY f.data_criacao DESC
+    ''', args);
+
+    return resultado.map((map) => FotoModel.fromMap(map)).toList();
+  }
+
   static Future<List<FotoModel>> listarTodas() async {
     final db = await Create.database;
 
@@ -145,5 +183,11 @@ class FotoModel {
     );
 
     return resultado.map((map) => FotoModel.fromMap(map)).toList();
+  }
+
+  static Future<void> excluir(int id) async {
+    final db = await Create.database;
+
+    await db.delete('fotos', where: 'id = ?', whereArgs: [id]);
   }
 }

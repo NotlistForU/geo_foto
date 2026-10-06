@@ -2,15 +2,14 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:camera_overlay/camera_overlay.dart' as cam;
-import 'package:sipam_foto/model/localizacao.dart' as model;
-import 'package:sipam_foto/database/missoes/update.dart' as update;
-import 'package:sipam_foto/database/missoes/insert.dart' as insert;
-import 'package:sipam_foto/database/missoes/select.dart' as select;
-import 'package:sipam_foto/model/missao.dart' as model;
+import 'package:sipam_foto/model/localizacao.dart';
+import 'package:sipam_foto/model/missao_model.dart';
 import 'package:sipam_foto/view/missao/lista.dart';
 import 'package:sipam_foto/view/galeria/page.dart' as page;
 import 'package:sipam_foto/view/mapa/mapa_page.dart' as page;
-import 'package:sipam_foto/service/foto_service.dart' as service;
+import 'package:sipam_foto/service/arquivo_service.dart';
+import 'package:sipam_foto/model/foto_model.dart';
+import 'package:sipam_foto/model/missao_model.dart';
 
 class Missao extends StatefulWidget {
   const Missao({super.key});
@@ -20,8 +19,8 @@ class Missao extends StatefulWidget {
 }
 
 class _MissaoState extends State<Missao> {
-  final service.FotoService _fotoService = service.FotoService();
-  late Future<List<model.Missao>> missoesFuture;
+  final ArquivoService _arquivoService = ArquivoService();
+  late Future<List<MissaoModel>> missoesFuture;
 
   @override
   void initState() {
@@ -30,7 +29,9 @@ class _MissaoState extends State<Missao> {
   }
 
   void _reloadMissoes() {
-    missoesFuture = select.Missao.todasMissoes();
+    setState(() {
+      missoesFuture = MissaoModel.listar();
+    });
   }
 
   void _abrirCamera(int missaoId) {
@@ -46,13 +47,14 @@ class _MissaoState extends State<Missao> {
             temBotaoGaleria: true,
             temMiniMapa: true,
             onFotoFinal: (bytes, localizacao) async {
-              if (localizacao == null) return;
-              final locApp = model.Localizacao.fromCamera(localizacao);
-              await _fotoService.salvarFoto(
-                missaoId: missaoId,
-                bytes: bytes,
-                localizacao: locApp,
-              );
+              // TODO: ajustar onFotoFinal
+              // if (localizacao == null) return;
+              // final locApp = Localizacao.fromCamera(localizacao);
+              // await ArquivoService.salvarFoto(
+              //   missaoId: missaoId,
+              //   bytes: bytes,
+              //   localizacao: locApp,
+              // );
             },
             onAbrirGaleria: () {
               Navigator.push(
@@ -114,9 +116,9 @@ class _MissaoState extends State<Missao> {
               onPressed: () async {
                 final nome = textC.text.trim();
                 if (nome.isEmpty) return;
-                final existe = await select.Missao.existeMissao(nome);
+                final missaoExiste = await MissaoModel.buscarPorNome(nome);
                 if (!c.mounted) return;
-                if (!existe) {
+                if (missaoExiste != null) {
                   ScaffoldMessenger.of(c).showSnackBar(
                     const SnackBar(
                       content: Text('Já existe uma missão com esse nome'),
@@ -124,13 +126,24 @@ class _MissaoState extends State<Missao> {
                   );
                   return;
                 }
-                await insert.Missao.values(nome: nome, ativa: ativarAgora);
+                final missao = MissaoModel(
+                  id: 0,
+                  data: DateTime.now(),
+                  nome: nome,
+                  ativa: false, // ativa depois no ativarMissao(missao);
+                );
+                final missaoId = await MissaoModel.inserir(missao);
+                if (ativarAgora) {
+                  MissaoModel.ativarMissaoPorId(missaoId);
+                }
                 if (!c.mounted) return;
                 Navigator.pop(c);
                 if (ativarAgora) {
-                  final missaoAtiva = await select.Missao.missaoAtiva();
-                  if (missaoAtiva != null) _abrirCamera(missaoAtiva.id);
+                  // TODO: ver fluxo de missao -> mapa -> foto
+                  // final missaoAtiva = await MissaoModel.buscarAtiva();
+                  // if (missaoAtiva != null) _abrirCamera(missaoAtiva.id);
                 }
+                _reloadMissoes();
               },
               child: const Text('Criar'),
             ),
@@ -169,7 +182,7 @@ class _MissaoState extends State<Missao> {
           ),
         ],
       ),
-      body: FutureBuilder<List<model.Missao>>(
+      body: FutureBuilder<List<MissaoModel>>(
         future: missoesFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -192,7 +205,7 @@ class _MissaoState extends State<Missao> {
                 nome: nomeWithId,
                 ativa: missao.ativa,
                 onTap: () async {
-                  await update.Missao.ativar(missao);
+                  await MissaoModel.ativarMissao(missao);
                   if (!c.mounted) return;
                   _abrirCamera(missao.id);
                 },

@@ -8,9 +8,7 @@ import 'package:share_plus/share_plus.dart';
 
 class ArquivoService {
   //================ COMPARTILHAR ARQUIVOS =========================================
-  static Future<void> compartilharFotos(int missaoId) async {
-    final fotos = await FotoModel.listarPorMissao(missaoId);
-
+  static Future<void> compartilharFotos(List<FotoModel> fotos) async {
     if (fotos.isEmpty) {
       throw Exception('A missão não possui fotos.');
     }
@@ -34,12 +32,15 @@ class ArquivoService {
   }
 
   //================ CRIAR MODEL + DIRETORIOS =======================================
-  static Future<MissaoModel> criarMissao({required String nome}) async {
+  static Future<MissaoModel> criarMissao({
+    required String nomeMissao,
+    required bool ativar,
+  }) async {
     final missao = MissaoModel(
       id: 0,
       data: DateTime.now(),
-      nome: nome,
-      ativa: true,
+      nome: nomeMissao,
+      ativa: ativar,
     );
 
     final id = await MissaoModel.inserir(missao);
@@ -147,6 +148,41 @@ class ArquivoService {
     }
   }
 
+  //============================= EXCLUIR MODEL + ARQUIVO =========================
+  static Future<void> excluirFoto(FotoModel foto) async {
+    await excluirFotos([foto]);
+  }
+
+  static Future<void> excluirFotos(List<FotoModel> fotos) async {
+    final excluidas = <FotoModel>[];
+
+    try {
+      // 1. Remove do banco
+      for (final foto in fotos) {
+        await FotoModel.excluir(foto.id);
+        excluidas.add(foto);
+      }
+
+      // 2. Remove os arquivos
+      for (final foto in fotos) {
+        await excluirFotoArquivo(foto);
+      }
+    } catch (e) {
+      // 3. Rollback do banco
+      for (final foto in excluidas) {
+        try {
+          await FotoModel.inserir(foto);
+        } catch (erroRollback) {
+          throw Exception(
+            'Erro ao excluir as fotos e restaurar o banco: $erroRollback',
+          );
+        }
+      }
+
+      rethrow;
+    }
+  }
+
   //======================== SALVAR ARQUIVO =======================================
   static Future<File> salvarFotoArquivo({
     required Uint8List bytes,
@@ -229,6 +265,19 @@ class ArquivoService {
     await arquivo.writeAsBytes(bytes);
 
     return arquivo;
+  }
+
+  //============================= EXCLUIR ARQUIVO =====================================
+  static Future<void> excluirFotoArquivo(FotoModel foto) async {
+    final arquivo = await getFoto(foto);
+
+    if (arquivo == null) {
+      return;
+    }
+
+    if (await arquivo.exists()) {
+      await arquivo.delete();
+    }
   }
 
   //============================ GET's ================================================

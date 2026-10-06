@@ -25,7 +25,6 @@ class _FiltrosState extends State<Filtros> {
   void initState() {
     super.initState();
     filtro = widget.filtro;
-    _nomeController = TextEditingController(text: filtro.nome ?? '');
     _loadMissoes();
   }
 
@@ -65,23 +64,9 @@ class _FiltrosState extends State<Filtros> {
           ),
           const SizedBox(height: 12),
 
-          TextField(
-            decoration: const InputDecoration(labelText: 'Nome'),
-            controller: _nomeController,
-            onChanged: (v) {
-              final texto = v.trim().toLowerCase();
-              if (texto.isEmpty) {
-                filtro = filtro.copyWith(limparNome: true);
-              } else {
-                filtro = filtro.copyWith(nome: texto);
-              }
-            },
-          ),
-          const SizedBox(height: 12),
-
           DropdownButtonFormField<int>(
-            key: ValueKey(filtro.missaoid ?? -1),
-            initialValue: filtro.missaoid ?? -1,
+            key: ValueKey(filtro.missaoId ?? -1),
+            initialValue: filtro.missaoId ?? -1,
             style: TextStyle(color: Colors.white),
             dropdownColor: const Color.fromARGB(255, 40, 50, 70),
             isExpanded: true,
@@ -105,13 +90,11 @@ class _FiltrosState extends State<Filtros> {
             onChanged: (v) {
               if (v == -1) {
                 setState(() {
-                  filtro = filtro.copyWith(missaoid: null, limparMissao: true);
-                  debugPrint('Missao id ESTA null mesmo!');
+                  filtro = filtro.copyWith(missaoId: null, limparMissao: true);
                 });
               } else {
                 setState(() {
-                  filtro = filtro.copyWith(missaoid: v);
-                  debugPrint('Missao id NAO esta null');
+                  filtro = filtro.copyWith(missaoId: v);
                 });
               }
             },
@@ -165,34 +148,6 @@ class _FiltrosState extends State<Filtros> {
                 ),
               ),
             ],
-          ),
-          InputDecorator(
-            decoration: const InputDecoration(
-              labelText: 'Altura (m)',
-
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.all(Radius.circular(8)),
-              ),
-            ),
-            child: RangeSlider(
-              values: _altitudeRange,
-              min: _min,
-              max: _max,
-              divisions: 1000,
-              labels: RangeLabels(
-                '${_altitudeRange.start.round()}m',
-                '${_altitudeRange.end.round()}m',
-              ),
-              onChanged: (RangeValues values) {
-                setState(() {
-                  _altitudeRange = values;
-                  filtro = filtro.copyWith(
-                    minimo: values.start,
-                    maximo: values.end,
-                  );
-                });
-              },
-            ),
           ),
           Row(
             children: [

@@ -11,6 +11,9 @@ class MissaoModel {
     required this.nome,
     required this.ativa,
   });
+  int getId() {
+    return id;
+  }
 
   factory MissaoModel.fromMap(Map<String, dynamic> map) {
     return MissaoModel(
@@ -23,7 +26,6 @@ class MissaoModel {
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
       'data_criacao': data.millisecondsSinceEpoch,
       'nome': nome,
       'ativa': ativa ? 1 : 0,
@@ -45,7 +47,6 @@ class MissaoModel {
 
   static Future<int> inserir(MissaoModel missao) async {
     final db = await Create.database;
-
     return await db.insert('missoes', missao.toMap());
   }
 
@@ -66,12 +67,59 @@ class MissaoModel {
     return MissaoModel.fromMap(resultado.first);
   }
 
+  static Future<MissaoModel?> buscarPorNome(String nome) async {
+    final db = await Create.database;
+
+    final resultado = await db.query(
+      'missoes',
+      where: 'nome = ?',
+      whereArgs: [nome],
+      limit: 1,
+    );
+
+    if (resultado.isEmpty) {
+      return null;
+    }
+
+    return MissaoModel.fromMap(resultado.first);
+  }
+
   static Future<List<MissaoModel>> listar() async {
     final db = await Create.database;
 
     final resultado = await db.query('missoes', orderBy: 'data_criacao DESC');
 
     return resultado.map((map) => MissaoModel.fromMap(map)).toList();
+  }
+
+  static Future<void> ativarMissao(MissaoModel missao) async {
+    final db = await Create.database;
+
+    await db.transaction((txn) async {
+      await txn.update('missoes', {'ativa': 0});
+
+      await txn.update(
+        'missoes',
+        {'ativa': 1},
+        where: 'id = ?',
+        whereArgs: [missao.id],
+      );
+    });
+  }
+
+  static Future<void> ativarMissaoPorId(int missaoId) async {
+    final db = await Create.database;
+
+    await db.transaction((txn) async {
+      await txn.update('missoes', {'ativa': 0});
+
+      await txn.update(
+        'missoes',
+        {'ativa': 1},
+        where: 'id = ?',
+        whereArgs: [missaoId],
+      );
+    });
   }
 
   static Future<int> atualizar(MissaoModel missao) async {

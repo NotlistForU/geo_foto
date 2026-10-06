@@ -151,7 +151,7 @@ class _FotoState extends State<Foto> {
                 onPressed: () async {
                   final confirmar = await confirmarExclusao(context);
                   if (!confirmar) return;
-                  await FotoModel.delete(fotoAtual);
+                  await ArquivoService.excluirFoto(fotoAtual);
                   if (context.mounted) {
                     Navigator.pop(context, true);
                   }

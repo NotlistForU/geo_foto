@@ -23,7 +23,6 @@ class Galeria extends StatefulWidget {
 enum TipoOrdem { maisRecente, maisAntigas, crescente, decrescente }
 
 class _GaleriaState extends State<Galeria> {
-  final service.ArquivoService _arquivoService = service.ArquivoService();
   TipoOrdem _ordemAtual = TipoOrdem.maisRecente;
   bool loading = true;
   List<FotoModel> fotos = [];
@@ -78,14 +77,15 @@ class _GaleriaState extends State<Galeria> {
   Future<void> carregarGaleria() async {
     setState(() => loading = true);
 
-    final resultado = await _arquivoService.(filtroAtual);
+    final listFotos = await FotoModel.listar(filtroAtual);
 
-    final List<FotoModel> listFotos = [];
     final Map<int, File> mapArquivos = {};
 
-    for (final registro in resultado) {
-      listFotos.add(registro.foto);
-      mapArquivos[registro.foto.id] = registro.arquivo;
+    for (final foto in listFotos) {
+      final arquivo = await ArquivoService.getFoto(foto);
+      if (arquivo != null && await arquivo.exists()) {
+        mapArquivos[foto.id] = arquivo;
+      }
     }
     PaintingBinding.instance.imageCache.clear();
     PaintingBinding.instance.imageCache.clearLiveImages();
@@ -120,14 +120,14 @@ class _GaleriaState extends State<Galeria> {
               : '${fotosSelecionadas.length}  ${fotosSelecionadas.length > 1 ? "selecionadas" : "selecionada"}',
         ),
         actions: [
-          IconButton(
-            tooltip: 'Sincronizar galeria',
-            icon: const Icon(Icons.sync),
-            onPressed: () async {
-              await _arquivoService.renumerarTodasMissoes();
-              await carregarGaleria();
-            },
-          ),
+          // IconButton(
+          //   tooltip: 'Sincronizar galeria',
+          //   icon: const Icon(Icons.sync),
+          //   onPressed: () async {
+          //     await ArquivoService.renumerarTodasMissoes();
+          //     await carregarGaleria();
+          //   },
+          // ),
           if (fotos.length != fotosSelecionadas.length)
             IconButton(
               icon: const Icon(Icons.select_all),
@@ -149,7 +149,7 @@ class _GaleriaState extends State<Galeria> {
 
                 if (!confirmar) return;
 
-                await delete.Foto.varias(fotosSelecionadas);
+                await ArquivoService.excluirFotos(fotosSelecionadas);
                 await carregarGaleria();
 
                 if (fotos.isEmpty) {
