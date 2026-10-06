@@ -41,6 +41,14 @@ class MyApp extends StatelessWidget {
             color: Colors.white70,
           ), // fundo do AlertDialog
         ),
+        bottomSheetTheme: const BottomSheetThemeData(
+          backgroundColor: Color.fromARGB(255, 40, 50, 70),
+          modalBackgroundColor: Color.fromARGB(255, 40, 50, 70),
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+        ),
         dropdownMenuTheme: DropdownMenuThemeData(menuStyle: const MenuStyle()),
         switchTheme: const SwitchThemeData(),
       ),
