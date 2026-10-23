@@ -5,15 +5,17 @@ import 'package:intl/intl.dart';
 
 import 'package:extended_image/extended_image.dart';
 import 'package:sipam_foto/model/foto_model.dart';
-import 'package:sipam_foto/view/galeria/utils.dart';
+import 'package:sipam_foto/view/utils.dart';
 import 'package:sipam_foto/service/arquivo_service.dart';
 
-class Foto extends StatefulWidget {
+/// Usado nas pages:
+/// - GaleriaPage;
+class FotoWidget extends StatefulWidget {
   final Map<int, File> arquivos;
   final List<FotoModel> fotos;
   final int initialIndex;
   final List<FotoModel> fotosSelecionadas;
-  const Foto({
+  const FotoWidget({
     super.key,
     required this.arquivos,
     required this.fotos,
@@ -22,10 +24,10 @@ class Foto extends StatefulWidget {
   });
 
   @override
-  State<Foto> createState() => _FotoState();
+  State<FotoWidget> createState() => _FotoWidgetState();
 }
 
-class _FotoState extends State<Foto> {
+class _FotoWidgetState extends State<FotoWidget> {
   late ExtendedPageController _pageController;
   late int _currentIndex;
 
@@ -83,7 +85,7 @@ class _FotoState extends State<Foto> {
                         ),
                       ],
                     ),
-                    Spacer(),
+                    SizedBox(width: 16),
                     Expanded(
                       child: Text(
                         fotoAtual.nome,

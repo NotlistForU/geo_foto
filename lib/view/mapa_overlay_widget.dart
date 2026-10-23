@@ -2,14 +2,16 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'dart:io';
+import 'package:sipam_foto/model/mapa_model.dart';
 
-class MapOverlay {
+class MapOverlayWidget {
   final String imageAsset;
   final LatLngBounds bounds;
 
-  const MapOverlay({required this.imageAsset, required this.bounds});
+  const MapOverlayWidget({required this.imageAsset, required this.bounds});
 
-  factory MapOverlay.fromJson(Map<String, dynamic> json, String folder) {
+  factory MapOverlayWidget.fromJson(Map<String, dynamic> json, String folder) {
     final corners = json['corners'] as Map<String, dynamic>;
 
     // No JSON vem [lon, lat]; o LatLng espera (lat, lon)
@@ -18,7 +20,7 @@ class MapOverlay {
       return LatLng((c[1] as num).toDouble(), (c[0] as num).toDouble());
     }
 
-    return MapOverlay(
+    return MapOverlayWidget(
       imageAsset: '$folder${json['image']}',
       bounds: LatLngBounds.fromPoints([
         point('upperLeft'),
@@ -29,7 +31,7 @@ class MapOverlay {
     );
   }
 
-  static Future<List<MapOverlay>> loadAll({
+  static Future<List<MapOverlayWidget>> loadAll({
     String folder = 'assets/map/',
   }) async {
     final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
@@ -37,10 +39,12 @@ class MapOverlay {
       (p) => p.startsWith(folder) && p.endsWith('.json'),
     );
 
-    final overlays = <MapOverlay>[];
+    final overlays = <MapOverlayWidget>[];
     for (final path in jsonPaths) {
       final data = jsonDecode(await rootBundle.loadString(path));
-      overlays.add(MapOverlay.fromJson(data as Map<String, dynamic>, folder));
+      overlays.add(
+        MapOverlayWidget.fromJson(data as Map<String, dynamic>, folder),
+      );
     }
     return overlays;
   }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:sipam_foto/view/missao/missao.dart';
+import 'package:sipam_foto/view/missoes_page.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:sipam_foto/view/mapa/mapa_page.dart';
+import 'package:sipam_foto/view/mapa_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,7 +53,7 @@ class MyApp extends StatelessWidget {
         switchTheme: const SwitchThemeData(),
       ),
 
-      home: const Missao(), // sua tela inicial
+      home: const MissaoPage(), // sua tela inicial
     );
   }
 }

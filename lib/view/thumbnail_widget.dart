@@ -6,13 +6,13 @@ import 'package:photo_manager/photo_manager.dart';
 import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
 import 'package:sipam_foto/model/foto_model.dart';
 
-class Thumbnail extends StatelessWidget {
+class ThumbnailWidget extends StatelessWidget {
   final File arquivo;
   final FotoModel foto;
   final bool isSelected;
   final bool isSelectionMode;
   final VoidCallback? onSelectToggle;
-  const Thumbnail({
+  const ThumbnailWidget({
     super.key,
     required this.arquivo,
     required this.foto,

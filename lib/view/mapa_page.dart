@@ -6,8 +6,11 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:sipam_foto/model/missao_model.dart';
 import 'package:sipam_foto/model/ponto_model.dart';
+import 'package:sipam_foto/service/importar_mapa_service.dart';
 import 'package:sipam_foto/service/localizacao_service.dart';
-import 'package:sipam_foto/view/mapa/mapa_overlay.dart';
+import 'package:sipam_foto/view/ponto_widget.dart';
+import 'dart:io';
+import 'package:sipam_foto/model/mapa_model.dart';
 
 class MapaPage extends StatefulWidget {
   const MapaPage({super.key});
@@ -20,7 +23,7 @@ class _MapaPageState extends State<MapaPage> {
   final MapController _mapController = MapController();
 
   MissaoModel? missao;
-  List<MapOverlay> _overlays = [];
+  MapaModel? _mapa;
   List<PontoModel> _pontos = [];
 
   LatLng? _minhaPosicao;
@@ -34,7 +37,6 @@ class _MapaPageState extends State<MapaPage> {
   void initState() {
     super.initState();
     _carregarDados();
-    _carregarOverlays();
   }
 
   @override
@@ -53,17 +55,34 @@ class _MapaPageState extends State<MapaPage> {
     }
     setState(() => missao = resultado);
     await _carregarPontos();
+    await _carregarMapa();
   }
 
   // PNG é opcional: se não existir ou falhar, o mapa segue normal.
-  Future<void> _carregarOverlays() async {
+  Future<void> _carregarMapa() async {
     try {
-      final overlays = await MapOverlay.loadAll();
+      final mapa = await MapaModel.buscarPorMissao(missao!.id);
+      if (mapa != null && !await File(mapa.imagePath).exists()) {
+        _aviso('Arquivo do mapa não encontrado');
+        return;
+      }
       if (!mounted) return;
-      setState(() => _overlays = overlays);
-    } catch (_) {
-      // sem PNG, sem problema
+      setState(() => _mapa = mapa);
+    } catch (e) {
+      _aviso('Erro ao carregar mapa: $e');
     }
+  }
+
+  void _abrirPonto(PontoModel ponto) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => PontoWidget(
+        ponto: ponto,
+        onCameraAberta: _pausarLocalizacao,
+        onCameraFechada: _retomarLocalizacao,
+      ),
+    );
   }
 
   Future<void> _carregarPontos() async {
@@ -76,21 +95,34 @@ class _MapaPageState extends State<MapaPage> {
     }
   }
 
-  // Chamado quando o mapa fica pronto (aí o MapController já pode mover).
+  void _iniciarStream() {
+    _posSub?.cancel();
+    _posSub = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 3,
+      ),
+    ).listen(_atualizarPosicao);
+  }
+
   Future<void> _iniciarLocalizacao() async {
     try {
-      final inicial = await LocalizacaoService.posicaoAtual(); // pede permissão
+      final inicial = await LocalizacaoService.posicaoAtual();
       _atualizarPosicao(inicial);
-
-      _posSub = Geolocator.getPositionStream(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          distanceFilter: 3,
-        ),
-      ).listen(_atualizarPosicao);
+      _iniciarStream();
     } catch (e) {
       _aviso('Localização indisponível: $e');
     }
+  }
+
+  void _pausarLocalizacao() {
+    _posSub?.cancel();
+    _posSub = null;
+  }
+
+  void _retomarLocalizacao() {
+    if (!mounted) return;
+    _iniciarStream();
   }
 
   void _atualizarPosicao(Position p) {
@@ -125,12 +157,53 @@ class _MapaPageState extends State<MapaPage> {
       final pos = _ultimaPosicao ?? await LocalizacaoService.posicaoAtual();
       final numero = await PontoModel.obterProximoNumero(missao!.id);
 
+      if (!mounted) return;
+
+      final nome = await showDialog<String>(
+        context: context,
+        builder: (context) {
+          String nomePonto = 'ponto${numero.toString().padLeft(2, '0')}';
+
+          return AlertDialog(
+            title: const Text('Nome do ponto'),
+            content: TextFormField(
+              initialValue: nomePonto,
+              autofocus: true,
+              decoration: const InputDecoration(labelText: 'Nome'),
+              onChanged: (value) {
+                nomePonto = value;
+              },
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  final texto = nomePonto.trim();
+
+                  if (texto.isNotEmpty) {
+                    Navigator.pop(context, texto);
+                  }
+                },
+                child: const Text('Criar'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (nome == null) {
+        return;
+      }
+
       final novo = PontoModel(
         id: 0,
         missaoId: missao!.id,
         numero: numero,
         data: DateTime.now(),
-        nome: 'Ponto ${numero.toString().padLeft(2, '0')}',
+        nome: nome,
         latitude: pos.latitude,
         longitude: pos.longitude,
         altitude: pos.altitude,
@@ -140,6 +213,7 @@ class _MapaPageState extends State<MapaPage> {
       await _carregarPontos();
 
       _mapController.move(LatLng(pos.latitude, pos.longitude), 18);
+
       _aviso('Ponto criado (precisão ±${pos.accuracy.toStringAsFixed(0)} m)');
     } catch (e) {
       _aviso('Erro ao criar ponto: $e');
@@ -153,35 +227,10 @@ class _MapaPageState extends State<MapaPage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-  void _abrirPonto(PontoModel ponto) {
-    // Passo 4: bottom sheet com as fotos + botão de tirar foto
-    showModalBottomSheet(
-      context: context,
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(ponto.nome, style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 8),
-              Text(
-                '${ponto.latitude.toStringAsFixed(6)}, '
-                '${ponto.longitude.toStringAsFixed(6)}',
-              ),
-              // TODO passo 4: grid de fotos + botão "Tirar foto"
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Marker _marcadorPonto(PontoModel ponto) {
     return Marker(
       point: LatLng(ponto.latitude, ponto.longitude),
-      width: 48,
+      width: 200,
       height: 56,
       alignment: Alignment.topCenter,
       child: GestureDetector(
@@ -189,17 +238,19 @@ class _MapaPageState extends State<MapaPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red),
-              ),
-              child: Text(
-                '${ponto.numero}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+            IntrinsicWidth(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red),
+                ),
+                child: Text(
+                  '${ponto.nome}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -226,6 +277,20 @@ class _MapaPageState extends State<MapaPage> {
     );
   }
 
+  void _irParaMapa() {
+    final m = _mapa;
+    if (m == null) {
+      _aviso('Esta missão não tem mapa carregado');
+      return;
+    }
+    _mapController.fitCamera(
+      CameraFit.coordinates(
+        coordinates: [m.upperLeft, m.upperRight, m.lowerRight, m.lowerLeft],
+        padding: const EdgeInsets.all(24),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -234,6 +299,12 @@ class _MapaPageState extends State<MapaPage> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
+          FloatingActionButton.small(
+            heroTag: 'ir_mapa',
+            onPressed: _irParaMapa,
+            child: const Icon(Icons.map),
+          ),
+          const SizedBox(height: 12),
           FloatingActionButton.small(
             heroTag: 'minha_posicao',
             onPressed: _centralizarEmMim,
@@ -257,8 +328,11 @@ class _MapaPageState extends State<MapaPage> {
       body: FlutterMap(
         mapController: _mapController,
         options: MapOptions(
-          initialCenter: LatLng(-7.6393, -72.6628),
-          initialZoom: 12,
+          initialCenter: LatLng(
+            -3.46,
+            -62.22,
+          ), // lat long do Centro da Floresta Amazônica.
+          initialZoom: 6,
           onMapReady: _iniciarLocalizacao,
         ),
         children: [
@@ -268,14 +342,15 @@ class _MapaPageState extends State<MapaPage> {
             userAgentPackageName: 'com.example.sipam_foto',
           ),
           // 2) PNG (só entra se existir)
-          if (_overlays.isNotEmpty)
+          if (_mapa != null)
             OverlayImageLayer(
               overlayImages: [
-                for (final o in _overlays)
-                  OverlayImage(
-                    imageProvider: AssetImage(o.imageAsset),
-                    bounds: o.bounds,
-                  ),
+                RotatedOverlayImage(
+                  imageProvider: FileImage(File(_mapa!.imagePath)),
+                  topLeftCorner: _mapa!.upperLeft,
+                  bottomLeftCorner: _mapa!.lowerLeft,
+                  bottomRightCorner: _mapa!.lowerRight,
+                ),
               ],
             ),
           // 3) círculo de precisão do GPS

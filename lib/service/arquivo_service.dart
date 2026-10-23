@@ -82,10 +82,7 @@ class ArquivoService {
 
     final resultado = ponto.copyWith(id: id);
 
-    await criarDiretorioPonto(
-      nomeMissao: missao.nome,
-      nomePonto: resultado.nome,
-    );
+    await criarDiretorioPonto(nomeMissao: missao.nome, ponto: resultado);
 
     return resultado;
   }
@@ -115,11 +112,11 @@ class ArquivoService {
     final nomeArquivo =
         '${normalizarNome(missao.nome)}'
         '_${normalizarNome(ponto.nome)}'
-        '_foto${numero.toString().padLeft(2, '0')}.png';
+        '_${numero.toString().padLeft(2, '0')}.png';
 
     final arquivo = await salvarFotoArquivo(
       nomeMissao: missao.nome,
-      nomePonto: ponto.nome,
+      ponto: ponto,
       nomeArquivo: nomeArquivo,
       bytes: bytes,
     );
@@ -187,12 +184,12 @@ class ArquivoService {
   static Future<File> salvarFotoArquivo({
     required Uint8List bytes,
     required String nomeMissao,
-    required String nomePonto,
+    required PontoModel ponto,
     required String nomeArquivo,
   }) async {
     final diretorio = await criarDiretorioPonto(
       nomeMissao: nomeMissao,
-      nomePonto: nomePonto,
+      ponto: ponto,
     );
     final arquivo = File('${diretorio.path}/$nomeArquivo');
     await arquivo.writeAsBytes(bytes);
@@ -237,15 +234,16 @@ class ArquivoService {
     return diretorio;
   }
 
+  /// - Se ja existir retorna o diretorio
   static Future<Directory> criarDiretorioPonto({
     required String nomeMissao,
-    required String nomePonto,
+    required PontoModel ponto,
   }) async {
     final diretorioPontos = await criarDiretorioPontos(nomeMissao: nomeMissao);
 
-    final nome = normalizarNome(nomePonto);
-
-    final diretorio = Directory('${diretorioPontos.path}/$nome');
+    final diretorio = Directory(
+      '${diretorioPontos.path}/${nomeDaPastaPonto(ponto)}',
+    );
 
     await diretorio.create(recursive: true);
 
@@ -267,7 +265,23 @@ class ArquivoService {
     return arquivo;
   }
 
-  //============================= EXCLUIR ARQUIVO =====================================
+  //============================= EXCLUIR =====================================
+  static Future<void> excluirPastaMissao(MissaoModel missao) async {
+    final dir = await getDiretorioMissao(missao);
+    if (dir == null) return;
+    if (await dir.exists()) {
+      await dir.delete(recursive: true);
+    }
+  }
+
+  static Future<void> excluirPastaPontos(MissaoModel missao) async {
+    final base = await getDiretorioMissao(missao);
+    if (base == null) return;
+
+    final dir = Directory('${base.path}/pontos');
+    if (await dir.exists()) await dir.delete(recursive: true);
+  }
+
   static Future<void> excluirFotoArquivo(FotoModel foto) async {
     final arquivo = await getFoto(foto);
 
@@ -294,10 +308,11 @@ class ArquivoService {
       return null;
     }
 
-    final diretorio = await criarDiretorioPonto(
-      nomeMissao: missao.nome,
-      nomePonto: ponto.nome,
-    );
+    final diretorio = await getDiretorioPonto(ponto);
+
+    if (diretorio == null) {
+      return null;
+    }
 
     final arquivo = File('${diretorio.path}/${foto.nome}');
 
@@ -306,6 +321,39 @@ class ArquivoService {
     }
 
     return null;
+  }
+
+  static Future<List<File?>> getFotos(List<FotoModel> fotos) async {
+    List<File> arquivos = [];
+    for (final foto in fotos) {
+      final arquivo = await getFoto(foto);
+
+      if (arquivo == null) continue;
+      arquivos.add(arquivo);
+    }
+    return arquivos;
+  }
+
+  static Future<Directory?> getDiretorioPonto(PontoModel ponto) async {
+    final missao = await MissaoModel.buscarPorId(ponto.missaoId);
+
+    if (missao == null) {
+      return null;
+    }
+
+    final diretorioBase = await getDiretorioMissao(missao);
+
+    if (diretorioBase == null) {
+      return null;
+    }
+
+    return Directory('${diretorioBase.path}/pontos/${nomeDaPastaPonto(ponto)}');
+  }
+
+  static Future<Directory?> getDiretorioMissao(MissaoModel missao) async {
+    final base = await _diretorioBase();
+
+    return Directory('${base.path}/${normalizarNome(missao.nome)}');
   }
 
   //============================ UTIL =================================================
@@ -347,5 +395,9 @@ class ArquivoService {
     resultado = resultado.replaceAll(RegExp(r'^_|_$'), '');
 
     return resultado;
+  }
+
+  static String nomeDaPastaPonto(PontoModel ponto) {
+    return "ponto_${ponto.numero.toString().padLeft(3, '0')}}";
   }
 }

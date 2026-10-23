@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:sipam_foto/model/filtro.dart' as model;
 import 'package:sipam_foto/model/missao_model.dart';
 
-class Filtros extends StatefulWidget {
+class FiltrosWidget extends StatefulWidget {
   final model.Filtro filtro;
-  const Filtros({super.key, required this.filtro});
+  const FiltrosWidget({super.key, required this.filtro});
 
   @override
-  State<Filtros> createState() => _FiltrosState();
+  State<FiltrosWidget> createState() => _FiltrosWidgetState();
 }
 
-class _FiltrosState extends State<Filtros> {
+class _FiltrosWidgetState extends State<FiltrosWidget> {
   late model.Filtro filtro;
   late TextEditingController _nomeController;
   DateTime? _inicio;

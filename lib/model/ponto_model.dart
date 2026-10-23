@@ -1,4 +1,5 @@
 import 'package:sipam_foto/database/create.dart';
+import 'dart:convert';
 
 class PontoModel {
   final int id;
@@ -8,7 +9,9 @@ class PontoModel {
   final String nome;
   final double latitude;
   final double longitude;
-  final double altitude;
+  final double? altitude;
+  final String? camada;
+  final Map<String, dynamic>? propriedades;
 
   const PontoModel({
     required this.id,
@@ -18,7 +21,9 @@ class PontoModel {
     required this.nome,
     required this.latitude,
     required this.longitude,
-    required this.altitude,
+    this.altitude,
+    this.camada,
+    this.propriedades,
   });
 
   factory PontoModel.fromMap(Map<String, dynamic> map) {
@@ -30,7 +35,11 @@ class PontoModel {
       nome: map['nome'] as String,
       latitude: (map['latitude'] as num).toDouble(),
       longitude: (map['longitude'] as num).toDouble(),
-      altitude: (map['altitude'] as num).toDouble(),
+      altitude: (map['altitude'] as num?)?.toDouble(),
+      camada: map['camada'] as String?,
+      propriedades: map['propriedades'] == null
+          ? null
+          : jsonDecode(map['propriedades'] as String) as Map<String, dynamic>,
     );
   }
 
@@ -43,6 +52,8 @@ class PontoModel {
       'latitude': latitude,
       'longitude': longitude,
       'altitude': altitude,
+      'camada': camada,
+      'propriedades': propriedades == null ? null : jsonEncode(propriedades),
     };
   }
 
@@ -55,6 +66,8 @@ class PontoModel {
     double? latitude,
     double? longitude,
     double? altitude,
+    String? camada,
+    Map<String, dynamic>? propriedades,
   }) {
     return PontoModel(
       id: id ?? this.id,
@@ -65,6 +78,8 @@ class PontoModel {
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       altitude: altitude ?? this.altitude,
+      camada: camada ?? this.camada,
+      propriedades: propriedades ?? this.propriedades,
     );
   }
 

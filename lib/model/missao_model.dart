@@ -92,6 +92,24 @@ class MissaoModel {
     return resultado.map((map) => MissaoModel.fromMap(map)).toList();
   }
 
+  static Future<MissaoModel?> getMissaoAtiva() async {
+    final db = await Create.database;
+
+    // Como só existe uma ativa por vez, limitamos a consulta a 1
+    final List<Map<String, dynamic>> maps = await db.query(
+      'missoes',
+      where: 'ativa = ?',
+      whereArgs: [1],
+      limit: 1,
+    );
+
+    if (maps.isNotEmpty) {
+      return MissaoModel.fromMap(maps.first);
+    }
+
+    return null;
+  }
+
   static Future<void> ativarMissao(MissaoModel missao) async {
     final db = await Create.database;
 

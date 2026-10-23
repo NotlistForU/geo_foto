@@ -2,27 +2,27 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:sipam_foto/view/galeria/foto.dart' as galeria_foto;
+import 'package:sipam_foto/view/foto_widget.dart' as galeria_foto;
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:sipam_foto/model/foto_model.dart';
 import 'package:sipam_foto/model/filtro.dart' as model;
-import 'package:sipam_foto/view/galeria/modal.dart' as modal;
+import 'package:sipam_foto/view/filtros_widget.dart' as modal;
 import 'package:sipam_foto/service/arquivo_service.dart';
-import 'package:sipam_foto/view/galeria/thumbnail.dart';
+import 'package:sipam_foto/view/thumbnail_widget.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sipam_foto/view/galeria/utils.dart';
+import 'package:sipam_foto/view/utils.dart';
 
-class Galeria extends StatefulWidget {
-  const Galeria({super.key});
+class GaleriaPage extends StatefulWidget {
+  const GaleriaPage({super.key});
   @override
-  State<Galeria> createState() => _GaleriaState();
+  State<GaleriaPage> createState() => _GaleriaPageState();
 }
 
 enum TipoOrdem { maisRecente, maisAntigas, crescente, decrescente }
 
-class _GaleriaState extends State<Galeria> {
+class _GaleriaPageState extends State<GaleriaPage> {
   TipoOrdem _ordemAtual = TipoOrdem.maisRecente;
   bool loading = true;
   List<FotoModel> fotos = [];
@@ -198,8 +198,12 @@ class _GaleriaState extends State<Galeria> {
               final resultado = await showModalBottomSheet(
                 backgroundColor: const Color.fromARGB(255, 25, 35, 55),
                 context: context,
+                useSafeArea: true,
                 isScrollControlled: true,
-                builder: (_) => modal.Filtros(filtro: filtroAtual),
+                builder: (_) => SafeArea(
+                  top: false,
+                  child: modal.FiltrosWidget(filtro: filtroAtual),
+                ),
               );
               if (resultado != null) {
                 filtroAtual = resultado;
@@ -256,7 +260,7 @@ class _GaleriaState extends State<Galeria> {
                   opaque:
                       false, // <-- É isso aqui que deixa o fundo transparente!
                   pageBuilder: (context, animation, secondaryAnimation) =>
-                      galeria_foto.Foto(
+                      galeria_foto.FotoWidget(
                         arquivos: arquivos,
                         fotos: fotos,
                         fotosSelecionadas: fotosSelecionadas,
@@ -268,7 +272,7 @@ class _GaleriaState extends State<Galeria> {
                 carregarGaleria();
               }
             },
-            child: Thumbnail(
+            child: ThumbnailWidget(
               arquivo: arquivo,
               foto: foto,
               isSelected: fotosSelecionadas.contains(foto),

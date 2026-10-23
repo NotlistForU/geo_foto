@@ -15,6 +15,9 @@ class Create {
     _db = await openDatabase(
       path,
       version: 1,
+      onConfigure: (db) async {
+        await db.execute('PRAGMA foreign_keys = ON');
+      },
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE missoes (
@@ -30,10 +33,14 @@ class Create {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             missao_id INTEGER NOT NULL UNIQUE,
             image_path TEXT NOT NULL,
-            south REAL NOT NULL,
-            north REAL NOT NULL,
-            west REAL NOT NULL,
-            east REAL NOT NULL,
+            upper_left_lat REAL NOT NULL,
+            upper_left_lng REAL NOT NULL,
+            upper_right_lat REAL NOT NULL,
+            upper_right_lng REAL NOT NULL,
+            lower_left_lat REAL NOT NULL,
+            lower_left_lng REAL NOT NULL,
+            lower_right_lat REAL NOT NULL,
+            lower_right_lng REAL NOT NULL,
             FOREIGN KEY (missao_id)
               REFERENCES missoes(id)
               ON DELETE CASCADE
@@ -49,7 +56,9 @@ class Create {
             data_criacao INTEGER NOT NULL,
             latitude REAL NOT NULL,
             longitude REAL NOT NULL,
-            altitude REAL NOT NULL,
+            altitude REAL,
+            camada TEXT,
+            propriedades TEXT,
             UNIQUE (missao_id, numero),
             FOREIGN KEY (missao_id)
               REFERENCES missoes(id)
@@ -67,9 +76,7 @@ class Create {
             latitude REAL,
             longitude REAL,
             altitude REAL,
-
             UNIQUE (ponto_id, numero),
-
             FOREIGN KEY (ponto_id)
               REFERENCES pontos(id)
               ON DELETE CASCADE
