@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:path_provider/path_provider.dart';
+import 'package:sipam_foto/database/create.dart';
+import 'package:sipam_foto/model/mapa_model.dart';
 import 'package:sipam_foto/model/missao_model.dart';
 import 'package:sipam_foto/model/ponto_model.dart';
 import 'package:sipam_foto/model/foto_model.dart';
@@ -26,9 +28,10 @@ class ArquivoService {
     if (arquivos.isEmpty) {
       throw Exception('Nenhuma foto encontrada no armazenamento.');
     }
-    ShareParams params = ShareParams(files: arquivos);
 
-    await SharePlus.instance.share(params);
+    ShareParams shareParams = ShareParams(files: arquivos);
+
+    await SharePlus.instance.share(shareParams);
   }
 
   //================ CRIAR MODEL + DIRETORIOS =======================================
@@ -94,6 +97,8 @@ class ArquivoService {
     double? latitude,
     double? longitude,
     double? altitude,
+    String? observacoes,
+    DateTime? data,
   }) async {
     final ponto = await PontoModel.buscarPorId(pontoId);
 
@@ -109,10 +114,14 @@ class ArquivoService {
 
     final numero = await FotoModel.obterProximoNumero(pontoId);
 
+    print("Nome do ponto: " + ponto.nome);
+
     final nomeArquivo =
-        '${normalizarNome(missao.nome)}'
-        '_${normalizarNome(ponto.nome)}'
+        '${normalizarNome(missao.nome, lowerCase: false)}'
+        '_${normalizarNome(ponto.nome, lowerCase: false)}'
         '_${numero.toString().padLeft(2, '0')}.png';
+
+    print("Nome da foto: " + nomeArquivo);
 
     final arquivo = await salvarFotoArquivo(
       nomeMissao: missao.nome,
@@ -124,13 +133,14 @@ class ArquivoService {
     try {
       final foto = FotoModel(
         id: 0,
-        data: DateTime.now(),
+        data: data ?? DateTime.now(),
         pontoId: pontoId,
         numero: numero,
         nome: nomeArquivo,
         latitude: latitude,
         longitude: longitude,
         altitude: altitude,
+        observacoes: observacoes,
       );
 
       final id = await FotoModel.inserir(foto);
@@ -265,7 +275,30 @@ class ArquivoService {
     return arquivo;
   }
 
-  //============================= EXCLUIR =====================================
+  //============================= EXCLUIR (ENUM no final do arquivo) =====================================
+  static Future<ResultadoExclusao> excluirMissao(MissaoModel missao) async {
+    final db = await Create.database;
+
+    // Guarda o mapa antes: o PNG fica em docs/mapas, fora da pasta da missão
+    final mapa = await MapaModel.buscarPorMissao(missao.id);
+
+    // 1. Banco (o cascade leva mapas, pontos e fotos junto)
+    await db.delete('missoes', where: 'id = ?', whereArgs: [missao.id]);
+
+    // 2. Arquivos: falha aqui não desfaz a exclusão
+    try {
+      await excluirPastaMissao(missao);
+
+      if (mapa != null) {
+        final png = File(mapa.imagePath);
+        if (await png.exists()) await png.delete();
+      }
+      return ResultadoExclusao.completa;
+    } catch (e) {
+      return ResultadoExclusao.arquivosPendentes;
+    }
+  }
+
   static Future<void> excluirPastaMissao(MissaoModel missao) async {
     final dir = await getDiretorioMissao(missao);
     if (dir == null) return;
@@ -357,8 +390,11 @@ class ArquivoService {
   }
 
   //============================ UTIL =================================================
-  static String normalizarNome(String nome) {
-    var resultado = nome.toLowerCase();
+  static String normalizarNome(String nome, {bool lowerCase = true}) {
+    var result = nome;
+    if (lowerCase) {
+      result = nome.toLowerCase();
+    }
 
     const acentos = {
       'á': 'a',
@@ -387,17 +423,19 @@ class ArquivoService {
     };
 
     acentos.forEach((comAcento, semAcento) {
-      resultado = resultado.replaceAll(comAcento, semAcento);
+      result = result.replaceAll(comAcento, semAcento);
     });
 
-    resultado = resultado.replaceAll(RegExp(r'[^a-z0-9]+'), '_');
-    resultado = resultado.replaceAll(RegExp(r'_+'), '_');
-    resultado = resultado.replaceAll(RegExp(r'^_|_$'), '');
+    result = result.replaceAll(RegExp(r'[^a-zA-Z0-9]+'), '_');
+    result = result.replaceAll(RegExp(r'_+'), '_');
+    result = result.replaceAll(RegExp(r'^_|_$'), '');
 
-    return resultado;
+    return result;
   }
 
   static String nomeDaPastaPonto(PontoModel ponto) {
-    return "ponto_${ponto.numero.toString().padLeft(3, '0')}}";
+    return "ponto_${ponto.numero.toString().padLeft(3, '0')}";
   }
 }
+
+enum ResultadoExclusao { completa, arquivosPendentes }

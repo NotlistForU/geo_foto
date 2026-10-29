@@ -10,6 +10,7 @@ class FotoModel {
   final double? latitude;
   final double? longitude;
   final double? altitude;
+  final String? observacoes;
 
   FotoModel({
     required this.id,
@@ -20,6 +21,7 @@ class FotoModel {
     this.latitude,
     this.longitude,
     this.altitude,
+    this.observacoes,
   });
 
   factory FotoModel.fromMap(Map<String, dynamic> map) {
@@ -32,6 +34,7 @@ class FotoModel {
       latitude: (map['latitude'] as num?)?.toDouble(),
       longitude: (map['longitude'] as num?)?.toDouble(),
       altitude: (map['altitude'] as num?)?.toDouble(),
+      observacoes: map['observacoes'] as String,
     );
   }
 
@@ -44,6 +47,7 @@ class FotoModel {
       'latitude': latitude,
       'longitude': longitude,
       'altitude': altitude,
+      'observacoes': observacoes,
     };
   }
 
@@ -94,6 +98,7 @@ class FotoModel {
     double? latitude,
     double? longitude,
     double? altitude,
+    String? observacoes,
   }) {
     return FotoModel(
       id: id ?? this.id,
@@ -104,6 +109,7 @@ class FotoModel {
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       altitude: altitude ?? this.altitude,
+      observacoes: observacoes ?? this.observacoes,
     );
   }
 

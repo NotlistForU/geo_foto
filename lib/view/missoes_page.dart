@@ -1,10 +1,7 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:camera_overlay/camera_overlay.dart' as cam;
-import 'package:sipam_foto/database/create.dart';
-import 'package:sipam_foto/model/localizacao.dart';
+import 'package:sipam_foto/model/foto_model.dart';
 import 'package:sipam_foto/model/mapa_model.dart';
 import 'package:sipam_foto/model/missao_model.dart';
 import 'package:sipam_foto/service/importar_mapa_service.dart';
@@ -12,8 +9,7 @@ import 'package:sipam_foto/view/lista_missoes_widget.dart';
 import 'package:sipam_foto/view/galeria_page.dart' as page;
 import 'package:sipam_foto/view/mapa_page.dart' as page;
 import 'package:sipam_foto/service/arquivo_service.dart';
-import 'package:sipam_foto/model/foto_model.dart';
-import 'package:sipam_foto/model/missao_model.dart';
+import 'package:sipam_foto/service/csv_service.dart';
 
 class MissaoPage extends StatefulWidget {
   const MissaoPage({super.key});
@@ -37,40 +33,6 @@ class _MissaoPageState extends State<MissaoPage> {
     setState(() {
       missoesFuture = MissaoModel.listar();
     });
-  }
-
-  void _abrirCamera(int missaoId) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => SafeArea(
-          child: cam.CameraOverlay(
-            titulo: "Câmera",
-            anguloRotacaoDireita: -90,
-            anguloRotacaoEsquerda: 90,
-            temBotaoGoogleMaps: true,
-            temBotaoGaleria: true,
-            temMiniMapa: true,
-            onFotoFinal: (bytes, localizacao) async {
-              // TODO: ajustar onFotoFinal
-              // if (localizacao == null) return;
-              // final locApp = Localizacao.fromCamera(localizacao);
-              // await ArquivoService.salvarFoto(
-              //   missaoId: missaoId,
-              //   bytes: bytes,
-              //   localizacao: locApp,
-              // );
-            },
-            onAbrirGaleria: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const page.GaleriaPage()),
-              );
-            },
-          ),
-        ),
-      ),
-    ).then((_) => setState(() => _reloadMissoes()));
   }
 
   void _openModal() {
@@ -219,12 +181,12 @@ class _MissaoPageState extends State<MissaoPage> {
             if (await arquivoAntigo.exists()) await arquivoAntigo.delete();
           }
         } catch (e, st) {
-          debugPrint('Erro ao limpar arquivos antigos: $e\n$st');
+          _aviso('Erro ao limpar arquivos antigos: $e\n$st');
         }
 
         _aviso('Mapa importado em "${missao.nome}"');
       } catch (e, st) {
-        debugPrint('Erro ao salvar mapa: $e\n$st');
+        _aviso('Erro ao salvar mapa: $e\n$st');
 
         if (pngPath != null) {
           final arquivo = File(pngPath);
@@ -244,7 +206,7 @@ class _MissaoPageState extends State<MissaoPage> {
         title: const Text('Sobrescrever missão?'),
         content: Text(
           'Esta missão tem ${r.pontosManuais} ponto(s) manuais criado(s) em campo '
-          'e ${r.fotos} foto(s). Importar vai APAGAR todos eles. Continuar?',
+          'e ${r.fotos} foto(s). Importar um novo mapa vai APAGAR todos eles. Continuar?',
         ),
         actions: [
           TextButton(
@@ -303,6 +265,65 @@ class _MissaoPageState extends State<MissaoPage> {
     );
   }
 
+  Future<void> _excluirMissao(MissaoModel missao) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Excluir missão?'),
+        content: Text(
+          '"${missao.nome}" será apagada junto com o mapa, os pontos e as '
+          'fotos. Isso não pode ser desfeito.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    try {
+      final result = await ArquivoService.excluirMissao(missao);
+      if (!mounted) return;
+      final msg = switch (result) {
+        ResultadoExclusao.completa => 'Missão excluída',
+        ResultadoExclusao.arquivosPendentes =>
+          'Missão excluída, mas alguns arquivos não puderam ser removidos',
+      };
+      _aviso(msg);
+    } catch (e) {
+      _aviso('Erro ao excluir missão: $e');
+    }
+
+    _reloadMissoes();
+  }
+
+  Future<void> _compartilharMissaoCsv(MissaoModel missao) async {
+    final fotos = await FotoModel.listarPorMissao(missao.id);
+
+    if (!mounted) return;
+
+    if (fotos.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Essa missão não tem fotos')),
+      );
+      return;
+    }
+
+    try {
+      await CsvService.compartilharMissaoCsv(missao: missao, fotos: fotos);
+    } catch (e) {
+      if (!mounted) return;
+      _aviso('Erro ao gerar o CSV');
+    }
+  }
+
   void _aviso(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
@@ -320,7 +341,6 @@ class _MissaoPageState extends State<MissaoPage> {
             icon: const Icon(Icons.photo_library),
             tooltip: 'Galeria',
             onPressed: () {
-              debugPrint('Botão galeria clicado');
               _reloadMissoes();
               Navigator.push(
                 context,
@@ -395,27 +415,22 @@ class _MissaoPageState extends State<MissaoPage> {
             itemCount: missoes.length,
             itemBuilder: (c, index) {
               final missao = missoes[index];
-              final nomeWithId = "${missao.nome} ID: ${missao.id}";
+              final nomeWithId = " ID: ${missao.id} ${missao.nome}";
               return Lista(
                 nome: nomeWithId,
                 ativa: missao.ativa,
                 onTap: () async {
-                  print(
-                    "DEBUG DE FLUXO DE ATIVAR MISSAO =============================================================",
-                  );
-                  print("Nome da missao que vai para o ativarMissao(missao)");
-                  print(missao.nome);
                   await MissaoModel.ativarMissao(missao);
                   if (!c.mounted) return;
-                  // TODO: fluxo de camera
-                  // _abrirCamera(missao.id);
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const page.MapaPage()),
                   );
                   _reloadMissoes();
                 },
+                onExportarCsv: () => _compartilharMissaoCsv(missao),
                 onImportarMapa: () => _importarMapa(missao),
+                onDeleteMissao: () => _excluirMissao(missao),
               );
             },
           );

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import 'package:extended_image/extended_image.dart';
+import 'package:marquee/marquee.dart';
 import 'package:sipam_foto/model/foto_model.dart';
 import 'package:sipam_foto/view/utils.dart';
 import 'package:sipam_foto/service/arquivo_service.dart';
@@ -87,13 +88,28 @@ class _FotoWidgetState extends State<FotoWidget> {
                     ),
                     SizedBox(width: 16),
                     Expanded(
-                      child: Text(
-                        fotoAtual.nome,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                      child: SizedBox(
+                        height:
+                            26, // Altura ajustada para o tamanho da fonte 18
+                        child: Marquee(
+                          text: fotoAtual.nome,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          scrollAxis: Axis.horizontal,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          blankSpace: 30.0, // Espaço antes de repetir o nome
+                          velocity:
+                              35.0, // Velocidade um pouquinho maior por conta da fonte maior
+                          pauseAfterRound: const Duration(seconds: 2),
+                          startPadding: 0.0,
+                          accelerationDuration: const Duration(seconds: 1),
+                          accelerationCurve: Curves.linear,
+                          decelerationDuration: const Duration(
+                            milliseconds: 500,
+                          ),
+                          decelerationCurve: Curves.easeOut,
                         ),
                       ),
                     ),

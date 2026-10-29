@@ -2,8 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:photo_manager/photo_manager.dart';
-import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
+import 'package:marquee/marquee.dart';
 import 'package:sipam_foto/model/foto_model.dart';
 
 class ThumbnailWidget extends StatelessWidget {
@@ -91,14 +90,33 @@ class ThumbnailWidget extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        foto.nome,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                      // Substitua o Text antigo por esta estrutura:
+                      SizedBox(
+                        height:
+                            18, // Define uma altura fixa para o texto que vai deslizar
+                        child: Marquee(
+                          text: foto.nome,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          scrollAxis: Axis.horizontal, // Desliza na horizontal
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          blankSpace:
+                              20.0, // Espaço em branco antes de repetir o nome
+                          velocity:
+                              30.0, // Velocidade do movimento (pixels por segundo)
+                          pauseAfterRound: const Duration(
+                            seconds: 2,
+                          ), // Pausa quando terminar de rolar
+                          startPadding: 0.0,
+                          accelerationDuration: const Duration(seconds: 1),
+                          accelerationCurve: Curves.linear,
+                          decelerationDuration: const Duration(
+                            milliseconds: 500,
+                          ),
+                          decelerationCurve: Curves.easeOut,
                         ),
                       ),
                       Text(

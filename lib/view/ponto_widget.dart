@@ -1,8 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-// Copia esses 3 imports iguais aos do arquivo onde você já tem o _abrirCamera
-// (o caminho do camera_overlay e dos services pode ser outro):
+import 'package:geolocator/geolocator.dart';
 import 'package:camera_overlay/camera_overlay.dart' as cam;
 import 'package:sipam_foto/model/foto_model.dart';
 import 'package:sipam_foto/model/ponto_model.dart';
@@ -29,6 +28,9 @@ class _PontoWidgetState extends State<PontoWidget> {
   Map<int, File> _arquivos = {};
   bool _carregando = true;
 
+  static const _limiteMetros = 30.0;
+  double? _distancia;
+
   @override
   void initState() {
     super.initState();
@@ -37,10 +39,6 @@ class _PontoWidgetState extends State<PontoWidget> {
 
   Future<void> _carregarFotos() async {
     try {
-      print(
-        "=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+",
-      );
-      print(widget.ponto.nome);
       final fotos = await FotoModel.listarPorPonto(widget.ponto.id);
       final arquivos = <int, File>{};
       for (final foto in fotos) {
@@ -79,7 +77,7 @@ class _PontoWidgetState extends State<PontoWidget> {
               temBotaoGoogleMaps: true,
               temBotaoGaleria: false,
               temMiniMapa: true,
-              onFotoFinal: (bytes, localizacao) async {
+              onFotoFinal: (bytes, localizacao, observacao) async {
                 try {
                   await ArquivoService.salvarFoto(
                     pontoId: widget.ponto.id,
@@ -87,6 +85,8 @@ class _PontoWidgetState extends State<PontoWidget> {
                     latitude: localizacao?.latitude,
                     longitude: localizacao?.longitude,
                     altitude: localizacao?.altitude,
+                    data: localizacao?.data,
+                    observacoes: observacao,
                   );
                 } catch (e) {
                   _aviso('Erro ao salvar foto: $e');

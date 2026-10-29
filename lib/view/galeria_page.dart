@@ -169,7 +169,7 @@ class _GaleriaPageState extends State<GaleriaPage> {
             ),
           PopupMenuButton<TipoOrdem>(
             icon: const Icon(Icons.sort),
-            tooltip: 'Mostrar menu',
+            tooltip: 'Ordenar por',
             onSelected: _ordenarLista,
             itemBuilder: (BuildContext context) => <PopupMenuEntry<TipoOrdem>>[
               const PopupMenuItem<TipoOrdem>(
@@ -247,9 +247,6 @@ class _GaleriaPageState extends State<GaleriaPage> {
               setState(() {
                 if (fotosSelecionadas.isEmpty) {
                   fotosSelecionadas.add(foto);
-                  debugPrint(
-                    "OnLongPress-> Fotos selecionadas: ${fotosSelecionadas.length}",
-                  );
                 }
               });
             },

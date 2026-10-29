@@ -6,7 +6,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:sipam_foto/model/missao_model.dart';
 import 'package:sipam_foto/model/ponto_model.dart';
-import 'package:sipam_foto/service/importar_mapa_service.dart';
 import 'package:sipam_foto/service/localizacao_service.dart';
 import 'package:sipam_foto/view/ponto_widget.dart';
 import 'dart:io';
@@ -48,7 +47,6 @@ class _MapaPageState extends State<MapaPage> {
   Future<void> _carregarDados() async {
     final resultado = await MissaoModel.buscarAtiva();
     if (!mounted) return;
-    // TODO: retornar com uma mensagem de erro (ative uma missao antes!)
     if (resultado == null) {
       Navigator.pop(context);
       return;
@@ -156,14 +154,15 @@ class _MapaPageState extends State<MapaPage> {
     try {
       final pos = _ultimaPosicao ?? await LocalizacaoService.posicaoAtual();
       final numero = await PontoModel.obterProximoNumero(missao!.id);
+      final ultimoNome = await PontoModel.obterUltimoNome(missao!.id);
+      final sugestao = PontoModel.sugerirProximoNome(ultimoNome);
 
       if (!mounted) return;
 
       final nome = await showDialog<String>(
         context: context,
         builder: (context) {
-          String nomePonto = 'ponto${numero.toString().padLeft(2, '0')}';
-
+          String nomePonto = sugestao;
           return AlertDialog(
             title: const Text('Nome do ponto'),
             content: TextFormField(

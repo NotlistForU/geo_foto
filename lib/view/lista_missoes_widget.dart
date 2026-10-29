@@ -4,12 +4,16 @@ class Lista extends StatelessWidget {
   final String nome;
   final bool ativa;
   final VoidCallback onTap;
+  final VoidCallback onExportarCsv;
   final VoidCallback? onImportarMapa;
+  final VoidCallback? onDeleteMissao;
   const Lista({
     super.key,
     required this.nome,
     required this.ativa,
     required this.onTap,
+    required this.onDeleteMissao,
+    required this.onExportarCsv,
     this.onImportarMapa,
   });
 
@@ -35,11 +39,21 @@ class Lista extends StatelessWidget {
                 icon: Icon(Icons.upload, color: corTexto),
                 onPressed: onImportarMapa,
               ),
-            if (ativa)
-              Icon(
-                Icons.check_circle,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+            // if (ativa)
+            //   Icon(
+            //     Icons.check_circle,
+            //     color: Theme.of(context).colorScheme.primary,
+            //   ),
+            IconButton(
+              tooltip: 'Exportar CSV',
+              icon: Icon(Icons.share, color: corTexto),
+              onPressed: onExportarCsv,
+            ),
+            IconButton(
+              onPressed: onDeleteMissao,
+              icon: Icon(Icons.delete),
+              color: ativa ? Colors.white : Colors.black,
+            ),
           ],
         ),
         onTap: onTap,

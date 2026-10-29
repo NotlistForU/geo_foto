@@ -76,6 +76,7 @@ class Create {
             latitude REAL,
             longitude REAL,
             altitude REAL,
+            observacoes TEXT,
             UNIQUE (ponto_id, numero),
             FOREIGN KEY (ponto_id)
               REFERENCES pontos(id)
