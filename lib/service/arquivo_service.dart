@@ -315,6 +315,13 @@ class ArquivoService {
     if (await dir.exists()) await dir.delete(recursive: true);
   }
 
+  static Future<void> excluirPastaPonto(PontoModel ponto) async {
+    final dir = await getDiretorioPonto(ponto);
+    if (dir == null) return;
+
+    if (await dir.exists()) await dir.delete(recursive: true);
+  }
+
   static Future<void> excluirFotoArquivo(FotoModel foto) async {
     final arquivo = await getFoto(foto);
 

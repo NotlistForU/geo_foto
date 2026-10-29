@@ -175,7 +175,7 @@ class PontoModel {
     );
   }
 
-  static Future<int> excluir(int id) async {
+  static Future<int> excluirPonto(int id) async {
     final db = await Create.database;
 
     return await db.delete('pontos', where: 'id = ?', whereArgs: [id]);

@@ -13,9 +13,11 @@ class PontoWidget extends StatefulWidget {
   final PontoModel ponto;
   final VoidCallback? onCameraAberta;
   final VoidCallback? onCameraFechada;
+  final VoidCallback? onExcluido;
   const PontoWidget({
     super.key,
     required this.ponto,
+    this.onExcluido,
     this.onCameraAberta,
     this.onCameraFechada,
   });
@@ -73,6 +75,8 @@ class _PontoWidgetState extends State<PontoWidget> {
   }
 
   Future<void> _tirarFoto() async {
+    _pararMonitoramento();
+    if (!mounted) return;
     widget.onCameraAberta?.call();
     try {
       await Navigator.push(
@@ -108,6 +112,7 @@ class _PontoWidgetState extends State<PontoWidget> {
       );
     } finally {
       widget.onCameraFechada?.call();
+      if (mounted) _iniciarMonitoramento();
     }
     await _carregarFotos();
     // voltou da câmera: atualiza o grid
@@ -129,6 +134,7 @@ class _PontoWidgetState extends State<PontoWidget> {
   }
 
   Future<void> _iniciarMonitoramento() async {
+    if (_posSub != null) return;
     var perm = await Geolocator.checkPermission();
 
     if (perm == LocationPermission.denied) {
@@ -174,6 +180,48 @@ class _PontoWidgetState extends State<PontoWidget> {
     ).listen(atualizarDistancia, onError: (_) {});
   }
 
+  Future<void> _pararMonitoramento() async {
+    await _posSub?.cancel();
+    _posSub = null;
+  }
+
+  Future<void> _excluirPonto() async {
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Excluir ponto?'),
+        content: Text(
+          'O ponto "${widget.ponto.nome}" e suas ${_fotos.length} foto(s) '
+          'serão apagados. Isso não pode ser desfeito.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (confirmou != true) return;
+
+    try {
+      // banco primeiro, pasta depois
+      await PontoModel.excluirPonto(widget.ponto.id);
+      await ArquivoService.excluirPastaPonto(widget.ponto);
+    } catch (e) {
+      _aviso('Erro ao excluir ponto: $e');
+      return;
+    }
+
+    if (!mounted) return;
+    widget.onExcluido?.call();
+    Navigator.pop(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     final ponto = widget.ponto;
@@ -186,7 +234,23 @@ class _PontoWidgetState extends State<PontoWidget> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(ponto.nome, style: Theme.of(context).textTheme.titleLarge),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    ponto.nome,
+                    style: Theme.of(context).textTheme.titleLarge,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                IconButton(
+                  onPressed: _excluirPonto,
+                  icon: const Icon(Icons.delete_outline),
+                  color: Colors.red,
+                  tooltip: 'Excluir ponto',
+                ),
+              ],
+            ),
             const SizedBox(height: 4),
             Text(
               '${ponto.latitude.toStringAsFixed(6)}, '

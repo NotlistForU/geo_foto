@@ -79,6 +79,9 @@ class _MapaPageState extends State<MapaPage> {
         ponto: ponto,
         onCameraAberta: _pausarLocalizacao,
         onCameraFechada: _retomarLocalizacao,
+        onExcluido: () {
+          setState(() => _pontos.removeWhere((p) => p.id == ponto.id));
+        },
       ),
     );
   }
