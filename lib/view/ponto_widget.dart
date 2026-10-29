@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:geolocator/geolocator.dart';
 import 'package:camera_overlay/camera_overlay.dart' as cam;
 import 'package:sipam_foto/model/foto_model.dart';
@@ -28,13 +29,21 @@ class _PontoWidgetState extends State<PontoWidget> {
   Map<int, File> _arquivos = {};
   bool _carregando = true;
 
-  static const _limiteMetros = 30.0;
+  static const _limiteMetros = 30.0; // ajusta como quiser
+  StreamSubscription<Position>? _posSub;
   double? _distancia;
 
   @override
   void initState() {
     super.initState();
     _carregarFotos();
+    _iniciarMonitoramento();
+  }
+
+  @override
+  void dispose() {
+    _posSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _carregarFotos() async {
@@ -119,6 +128,52 @@ class _PontoWidgetState extends State<PontoWidget> {
     if (alterou == true) await _carregarFotos();
   }
 
+  Future<void> _iniciarMonitoramento() async {
+    var perm = await Geolocator.checkPermission();
+
+    if (perm == LocationPermission.denied) {
+      perm = await Geolocator.requestPermission();
+    }
+
+    if (perm == LocationPermission.denied ||
+        perm == LocationPermission.deniedForever) {
+      return;
+    }
+
+    void atualizarDistancia(Position pos) {
+      final d = Geolocator.distanceBetween(
+        pos.latitude,
+        pos.longitude,
+        widget.ponto.latitude,
+        widget.ponto.longitude,
+      );
+
+      if (!mounted) return;
+      setState(() => _distancia = d);
+    }
+
+    try {
+      // Obtém a localização atual sem esperar pelo stream.
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 10),
+        ),
+      );
+
+      atualizarDistancia(pos);
+    } catch (_) {
+      // Se falhar, o stream ainda poderá atualizar a distância.
+    }
+
+    _posSub = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 3,
+      ),
+    ).listen(atualizarDistancia, onError: (_) {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final ponto = widget.ponto;
@@ -138,6 +193,25 @@ class _PontoWidgetState extends State<PontoWidget> {
               '${ponto.longitude.toStringAsFixed(6)}',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
+            if (_distancia != null && _distancia! > _limiteMetros) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.warning_amber,
+                    size: 18,
+                    color: Colors.orange,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Você está a ${_distancia!.toStringAsFixed(0)} m do ponto',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 12),
             ConstrainedBox(
               constraints: BoxConstraints(maxHeight: altura * 0.4),

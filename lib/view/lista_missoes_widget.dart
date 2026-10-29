@@ -19,15 +19,15 @@ class Lista extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final corTexto = ativa ? Colors.white : Colors.black87;
+    final corTexto = ativa ? Colors.black87 : Colors.white;
     return Card(
-      color: ativa ? Theme.of(context).colorScheme.primary.withAlpha(20) : null,
+      color: ativa ? null : Theme.of(context).colorScheme.primary.withAlpha(20),
       child: ListTile(
         title: Text(
           nome,
           style: TextStyle(
             fontWeight: ativa ? FontWeight.bold : FontWeight.normal,
-            color: ativa ? Colors.white : Colors.black87,
+            color: ativa ? Colors.black87 : Colors.white,
           ),
         ),
         trailing: Row(
@@ -46,13 +46,13 @@ class Lista extends StatelessWidget {
             //   ),
             IconButton(
               tooltip: 'Exportar CSV',
-              icon: Icon(Icons.share, color: corTexto),
+              icon: Icon(Icons.assignment, color: corTexto),
               onPressed: onExportarCsv,
             ),
             IconButton(
               onPressed: onDeleteMissao,
               icon: Icon(Icons.delete),
-              color: ativa ? Colors.white : Colors.black,
+              color: ativa ? Colors.black : Colors.white,
             ),
           ],
         ),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:sipam_foto/model/foto_model.dart';
 import 'package:sipam_foto/model/mapa_model.dart';
 import 'package:sipam_foto/model/missao_model.dart';
+import 'package:sipam_foto/model/ponto_model.dart';
 import 'package:sipam_foto/service/importar_mapa_service.dart';
 import 'package:sipam_foto/view/lista_missoes_widget.dart';
 import 'package:sipam_foto/view/galeria_page.dart' as page;
@@ -304,6 +305,40 @@ class _MissaoPageState extends State<MissaoPage> {
     _reloadMissoes();
   }
 
+  Future<FormatoCsv?> _escolherFormatoCsv() async {
+    return showDialog<FormatoCsv>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Formato do CSV'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: const Text('Brasil'),
+              subtitle: const Text('Separador ; e decimal ,'),
+              onTap: () {
+                Navigator.pop(context, FormatoCsv.brasil);
+              },
+            ),
+            ListTile(
+              title: const Text('Internacional'),
+              subtitle: const Text('Separador , e decimal .'),
+              onTap: () {
+                Navigator.pop(context, FormatoCsv.internacional);
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _compartilharMissaoCsv(MissaoModel missao) async {
     final fotos = await FotoModel.listarPorMissao(missao.id);
 
@@ -316,8 +351,22 @@ class _MissaoPageState extends State<MissaoPage> {
       return;
     }
 
+    final formato = await _escolherFormatoCsv();
+
+    if (!mounted || formato == null) return;
+
     try {
-      await CsvService.compartilharMissaoCsv(missao: missao, fotos: fotos);
+      final listaPontos = await PontoModel.listarPorMissao(
+        missao.id,
+      ); // ajusta pro nome real
+      final pontos = {for (final p in listaPontos) p.id: p};
+
+      await CsvService.compartilharMissaoCsv(
+        missao: missao,
+        fotos: fotos,
+        pontos: pontos,
+        formato: formato,
+      );
     } catch (e) {
       if (!mounted) return;
       _aviso('Erro ao gerar o CSV');

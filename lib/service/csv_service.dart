@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:sipam_foto/model/foto_model.dart';
 import 'package:sipam_foto/model/missao_model.dart';
+import 'package:sipam_foto/model/ponto_model.dart';
 
 class CsvService {
   final FormatoCsv formato;
@@ -47,15 +49,17 @@ class CsvService {
   static Future<void> compartilharMissaoCsv({
     required MissaoModel missao,
     required List<FotoModel> fotos,
+    required Map<int, PontoModel> pontos,
     FormatoCsv formato = FormatoCsv.brasil,
   }) async {
     final file = await criarMissaoCsv(
       missao: missao,
       fotos: fotos,
+      pontos: pontos,
       formato: formato,
     );
 
-    final result = await SharePlus.instance.share(
+    await SharePlus.instance.share(
       ShareParams(
         files: [XFile(file.path, mimeType: 'text/csv')],
         subject: 'Missão ${missao.nome}',
@@ -67,6 +71,7 @@ class CsvService {
   static Future<File> criarMissaoCsv({
     required MissaoModel missao,
     required List<FotoModel> fotos,
+    required Map<int, PontoModel> pontos,
     FormatoCsv formato = FormatoCsv.brasil,
   }) async {
     final csv = CsvService(formato);
@@ -80,11 +85,23 @@ class CsvService {
         'Longitude',
         'Altitude (m)',
         'Data/Hora',
+        'Deslocamento (m)',
         'Observações',
       ].map(csv.texto).toList(),
     );
 
     for (final foto in fotos) {
+      final ponto = pontos[foto.pontoId];
+      final deslocamento =
+          (ponto == null || foto.latitude == null || foto.longitude == null)
+          ? null
+          : distanciaMetros(
+              ponto.latitude,
+              ponto.longitude,
+              foto.latitude!,
+              foto.longitude!,
+            );
+
       csv.linha([
         csv.texto(missao.nome),
         csv.texto(foto.nome),
@@ -92,6 +109,7 @@ class CsvService {
         csv.numero(foto.longitude),
         csv.numero(foto.altitude),
         csv.texto(dataFmt.format(foto.data)),
+        csv.numero(deslocamento, casas: 1),
         csv.texto(foto.observacoes),
       ]);
     }
@@ -99,6 +117,24 @@ class CsvService {
     final nomeSeguro = missao.nome.replaceAll(RegExp(r'[^\w\-]+'), '_');
     final file = File('${dir.path}/missao_$nomeSeguro.csv');
     return file.writeAsString(csv.conteudo, encoding: utf8, flush: true);
+  }
+
+  static double distanciaMetros(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
+    const r = 6371000.0; // raio médio da Terra em metros
+    double rad(double g) => g * pi / 180;
+
+    final dLat = rad(lat2 - lat1);
+    final dLon = rad(lon2 - lon1);
+    final a =
+        pow(sin(dLat / 2), 2) +
+        cos(rad(lat1)) * cos(rad(lat2)) * pow(sin(dLon / 2), 2);
+
+    return 2 * r * asin(sqrt(a));
   }
 }
 
