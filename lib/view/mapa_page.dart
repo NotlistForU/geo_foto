@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:sipam_foto/model/foto_model.dart';
 import 'package:sipam_foto/model/missao_model.dart';
 import 'package:sipam_foto/model/ponto_model.dart';
 import 'package:sipam_foto/service/localizacao_service.dart';
@@ -31,6 +32,8 @@ class _MapaPageState extends State<MapaPage> {
   StreamSubscription<Position>? _posSub;
   bool _centralizouInicial = false;
   bool _criando = false;
+
+  Set<int> _pontosComFoto = {};
 
   @override
   void initState() {
@@ -90,7 +93,18 @@ class _MapaPageState extends State<MapaPage> {
     try {
       final pontos = await PontoModel.listarPorMissao(missao!.id);
       if (!mounted) return;
-      setState(() => _pontos = pontos);
+
+      final comFoto = <int>{};
+      for (final p in pontos) {
+        if (await FotoModel.existeFotoNoPonto(p.id)) {
+          comFoto.add(p.id);
+        }
+      }
+
+      setState(() {
+        _pontos = pontos;
+        _pontosComFoto = comFoto;
+      });
     } catch (e) {
       _aviso('Erro ao carregar pontos: $e');
     }
@@ -230,6 +244,7 @@ class _MapaPageState extends State<MapaPage> {
   }
 
   Marker _marcadorPonto(PontoModel ponto) {
+    final temFoto = _pontosComFoto.contains(ponto.id);
     return Marker(
       point: LatLng(ponto.latitude, ponto.longitude),
       width: 200,
@@ -245,7 +260,9 @@ class _MapaPageState extends State<MapaPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red),
+                  border: Border.all(
+                    color: temFoto ? Colors.green : Colors.red,
+                  ),
                 ),
                 child: Text(
                   '${ponto.nome}',
@@ -256,7 +273,11 @@ class _MapaPageState extends State<MapaPage> {
                 ),
               ),
             ),
-            const Icon(Icons.location_on, color: Colors.red, size: 32),
+            Icon(
+              Icons.location_on,
+              color: temFoto ? Colors.green : Colors.red,
+              size: 32,
+            ),
           ],
         ),
       ),

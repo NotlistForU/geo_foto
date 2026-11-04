@@ -150,6 +150,20 @@ class FotoModel {
     return resultado.map((map) => FotoModel.fromMap(map)).toList();
   }
 
+  static Future<bool> existeFotoNoPonto(int pontoId) async {
+    final db = await Create.database;
+
+    final resultado = await db.query(
+      'fotos',
+      columns: ['id'],
+      where: 'ponto_id = ?',
+      whereArgs: [pontoId],
+      limit: 1,
+    );
+
+    return resultado.isNotEmpty;
+  }
+
   static Future<List<FotoModel>> listarTodas() async {
     final db = await Create.database;
 
