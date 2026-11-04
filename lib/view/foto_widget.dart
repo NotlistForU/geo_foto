@@ -1,30 +1,34 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:photo_manager/photo_manager.dart';
-import 'package:photo_view/photo_view.dart';
-import 'package:extended_image/extended_image.dart';
-import 'package:sipam_foto/model/foto.dart' as model;
-import 'package:sipam_foto/database/fotos/delete.dart' as delete;
-import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
 
-class Foto extends StatefulWidget {
-  final Map<String, AssetEntity> assets;
-  final List<model.Foto> fotos;
+import 'package:extended_image/extended_image.dart';
+import 'package:marquee/marquee.dart';
+import 'package:sipam_foto/model/foto_model.dart';
+import 'package:sipam_foto/view/utils.dart';
+import 'package:sipam_foto/service/arquivo_service.dart';
+
+/// Usado nas pages:
+/// - GaleriaPage;
+class FotoWidget extends StatefulWidget {
+  final Map<int, File> arquivos;
+  final List<FotoModel> fotos;
   final int initialIndex;
-  final List<model.Foto> fotosSelecionadas;
-  const Foto({
+  final List<FotoModel> fotosSelecionadas;
+  const FotoWidget({
     super.key,
-    required this.assets,
+    required this.arquivos,
     required this.fotos,
     required this.initialIndex,
     required this.fotosSelecionadas,
   });
 
   @override
-  State<Foto> createState() => _FotoState();
+  State<FotoWidget> createState() => _FotoWidgetState();
 }
 
-class _FotoState extends State<Foto> {
+class _FotoWidgetState extends State<FotoWidget> {
   late ExtendedPageController _pageController;
   late int _currentIndex;
 
@@ -82,15 +86,30 @@ class _FotoState extends State<Foto> {
                         ),
                       ],
                     ),
-                    Spacer(),
+                    SizedBox(width: 16),
                     Expanded(
-                      child: Text(
-                        fotoAtual.nome,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                      child: SizedBox(
+                        height:
+                            26, // Altura ajustada para o tamanho da fonte 18
+                        child: Marquee(
+                          text: fotoAtual.nome,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          scrollAxis: Axis.horizontal,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          blankSpace: 30.0, // Espaço antes de repetir o nome
+                          velocity:
+                              35.0, // Velocidade um pouquinho maior por conta da fonte maior
+                          pauseAfterRound: const Duration(seconds: 2),
+                          startPadding: 0.0,
+                          accelerationDuration: const Duration(seconds: 1),
+                          accelerationCurve: Curves.linear,
+                          decelerationDuration: const Duration(
+                            milliseconds: 500,
+                          ),
+                          decelerationCurve: Curves.easeOut,
                         ),
                       ),
                     ),
@@ -106,13 +125,13 @@ class _FotoState extends State<Foto> {
           itemCount: widget.fotos.length,
           itemBuilder: (context, index) {
             final foto = widget.fotos[index];
-            final asset = widget.assets[foto.assetId];
+            final arquivo = widget.arquivos[foto.id];
 
-            if (asset == null) return const SizedBox.shrink();
+            if (arquivo == null) return const SizedBox.shrink();
 
             // Removemos o AnimatedBuilder e retornamos o ExtendedImage direto!
             return ExtendedImage(
-              image: AssetEntityImageProvider(asset, isOriginal: true),
+              image: FileImage(arquivo),
               fit: BoxFit.contain,
               mode: ExtendedImageMode.gesture,
               enableSlideOutPage: true, // <-- ESSENCIAL PARA FUNCIONAR
@@ -141,7 +160,16 @@ class _FotoState extends State<Foto> {
             children: [
               IconButton(
                 onPressed: () async {
-                  await delete.Foto.uma(fotoAtual);
+                  await ArquivoService.compartilharFotos([fotoAtual]);
+                },
+                icon: Icon(Icons.share, color: Colors.white),
+              ),
+
+              IconButton(
+                onPressed: () async {
+                  final confirmar = await confirmarExclusao(context);
+                  if (!confirmar) return;
+                  await ArquivoService.excluirFoto(fotoAtual);
                   if (context.mounted) {
                     Navigator.pop(context, true);
                   }

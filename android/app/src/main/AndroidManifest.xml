@@ -23,6 +23,7 @@
     
     <application
         android:label="sipam_foto"
+        android:allowBackup="false"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         

@@ -1,47 +1,31 @@
 class Filtro {
-  final String? nome;
   final DateTime? inicio;
   final DateTime? fim;
-  final double? minimo;
-  final double? maximo;
-  final int? missaoid;
-  const Filtro({
-    this.nome,
-    this.inicio,
-    this.fim,
-    this.minimo,
-    this.maximo,
-    this.missaoid,
-  });
-  // singleton para filtro vazio.
+  final int? missaoId;
+  final int? pontoId;
+
+  const Filtro({this.inicio, this.fim, this.missaoId, this.pontoId});
+
   static const Filtro empty = Filtro();
-  // Verifica ser um filtro qualquer esta vazio:
+
   bool get isEmpty {
-    return nome == null &&
-        inicio == null &&
-        fim == null &&
-        minimo == null &&
-        maximo == null &&
-        missaoid == null;
+    return inicio == null && fim == null && missaoId == null && pontoId == null;
   }
 
   Filtro copyWith({
-    String? nome,
     DateTime? inicio,
     DateTime? fim,
-    double? minimo,
-    double? maximo,
-    int? missaoid,
+    int? missaoId,
+    int? pontoId,
     bool limparMissao = false,
+    bool limparPonto = false,
     bool limparNome = false,
   }) {
     return Filtro(
-      nome: limparNome ? null : (nome ?? this.nome),
       inicio: inicio ?? this.inicio,
       fim: fim ?? this.fim,
-      minimo: minimo ?? this.minimo,
-      maximo: maximo ?? this.maximo,
-      missaoid: limparMissao ? null : (missaoid ?? this.missaoid),
+      missaoId: limparMissao ? null : (missaoId ?? this.missaoId),
+      pontoId: limparPonto ? null : (pontoId ?? this.pontoId),
     );
   }
 }

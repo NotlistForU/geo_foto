@@ -1,33 +1,31 @@
 import 'package:flutter/material.dart';
-import 'package:sipam_foto/database/missoes/select.dart' as select;
 import 'package:sipam_foto/model/filtro.dart' as model;
-import 'package:sipam_foto/model/missao.dart' as model;
+import 'package:sipam_foto/model/missao_model.dart';
+import 'package:sipam_foto/model/ponto_model.dart';
 
-class Filtros extends StatefulWidget {
+class FiltrosWidget extends StatefulWidget {
   final model.Filtro filtro;
-  const Filtros({super.key, required this.filtro});
+  const FiltrosWidget({super.key, required this.filtro});
 
   @override
-  State<Filtros> createState() => _FiltrosState();
+  State<FiltrosWidget> createState() => _FiltrosWidgetState();
 }
 
-class _FiltrosState extends State<Filtros> {
+class _FiltrosWidgetState extends State<FiltrosWidget> {
   late model.Filtro filtro;
   late TextEditingController _nomeController;
   DateTime? _inicio;
   DateTime? _fim;
-  double _min = 0;
-  double _max = 2000;
-  RangeValues _altitudeRange = const RangeValues(0, 2000);
-  List<model.Missao> missoes = [];
+  List<MissaoModel> missoes = [];
+  List<PontoModel> pontos = [];
   bool loadingMissoes = true;
 
   @override
   void initState() {
     super.initState();
     filtro = widget.filtro;
-    _nomeController = TextEditingController(text: filtro.nome ?? '');
-    _loadMissoes();
+    _carregarMissoes();
+    _carregarPontos(filtro.missaoId);
   }
 
   @override
@@ -36,12 +34,22 @@ class _FiltrosState extends State<Filtros> {
     super.dispose();
   }
 
-  Future<void> _loadMissoes() async {
-    final lista = await select.Missao.todasMissoes();
+  Future<void> _carregarMissoes() async {
+    final lista = await MissaoModel.listar();
     setState(() {
       missoes = lista;
       loadingMissoes = false;
     });
+  }
+
+  Future<void> _carregarPontos(int? missaoId) async {
+    if (missaoId == null) {
+      setState(() => pontos = []);
+      return;
+    }
+    final lista = await PontoModel.listarPorMissaoComFotos(missaoId);
+    if (!mounted) return;
+    setState(() => pontos = lista);
   }
 
   @override
@@ -66,23 +74,9 @@ class _FiltrosState extends State<Filtros> {
           ),
           const SizedBox(height: 12),
 
-          TextField(
-            decoration: const InputDecoration(labelText: 'Nome'),
-            controller: _nomeController,
-            onChanged: (v) {
-              final texto = v.trim().toLowerCase();
-              if (texto.isEmpty) {
-                filtro = filtro.copyWith(limparNome: true);
-              } else {
-                filtro = filtro.copyWith(nome: texto);
-              }
-            },
-          ),
-          const SizedBox(height: 12),
-
           DropdownButtonFormField<int>(
-            key: ValueKey(filtro.missaoid ?? -1),
-            initialValue: filtro.missaoid ?? -1,
+            key: ValueKey(filtro.missaoId ?? -1),
+            initialValue: filtro.missaoId ?? -1,
             style: TextStyle(color: Colors.white),
             dropdownColor: const Color.fromARGB(255, 40, 50, 70),
             isExpanded: true,
@@ -103,20 +97,47 @@ class _FiltrosState extends State<Filtros> {
                 (m) => DropdownMenuItem<int>(value: m.id, child: Text(m.nome)),
               ),
             ],
-            onChanged: (v) {
-              if (v == -1) {
-                setState(() {
-                  filtro = filtro.copyWith(missaoid: null, limparMissao: true);
-                  debugPrint('Missao id ESTA null mesmo!');
-                });
-              } else {
-                setState(() {
-                  filtro = filtro.copyWith(missaoid: v);
-                  debugPrint('Missao id NAO esta null');
-                });
-              }
+            onChanged: (valor) {
+              setState(() {
+                filtro = valor == -1
+                    ? filtro.copyWith(limparMissao: true, limparPonto: true)
+                    : filtro.copyWith(missaoId: valor, limparPonto: true);
+              });
+              _carregarPontos(valor == -1 ? null : valor);
             },
           ),
+          const SizedBox(height: 8),
+          if (filtro.missaoId != null)
+            DropdownButtonFormField<int>(
+              key: ValueKey('ponto-${filtro.missaoId}-${filtro.pontoId ?? -1}'),
+              initialValue: filtro.pontoId ?? -1,
+              style: const TextStyle(color: Colors.white),
+              dropdownColor: const Color.fromARGB(255, 40, 50, 70),
+              isExpanded: true,
+              decoration: InputDecoration(
+                labelText: 'Ponto',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              items: [
+                const DropdownMenuItem<int>(
+                  value: -1,
+                  child: Text('Todos os pontos'),
+                ),
+                ...pontos.map(
+                  (p) =>
+                      DropdownMenuItem<int>(value: p.id, child: Text(p.nome)),
+                ),
+              ],
+              onChanged: (v) {
+                setState(() {
+                  filtro = v == -1
+                      ? filtro.copyWith(limparPonto: true)
+                      : filtro.copyWith(pontoId: v);
+                });
+              },
+            ),
 
           Row(
             children: [
@@ -166,34 +187,6 @@ class _FiltrosState extends State<Filtros> {
                 ),
               ),
             ],
-          ),
-          InputDecorator(
-            decoration: const InputDecoration(
-              labelText: 'Altura (m)',
-
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.all(Radius.circular(8)),
-              ),
-            ),
-            child: RangeSlider(
-              values: _altitudeRange,
-              min: _min,
-              max: _max,
-              divisions: 1000,
-              labels: RangeLabels(
-                '${_altitudeRange.start.round()}m',
-                '${_altitudeRange.end.round()}m',
-              ),
-              onChanged: (RangeValues values) {
-                setState(() {
-                  _altitudeRange = values;
-                  filtro = filtro.copyWith(
-                    minimo: values.start,
-                    maximo: values.end,
-                  );
-                });
-              },
-            ),
           ),
           Row(
             children: [
