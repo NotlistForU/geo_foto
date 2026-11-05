@@ -170,7 +170,7 @@ class _MapaPageState extends State<MapaPage> {
       _aviso('Ainda sem localização');
       return;
     }
-    _mapController.move(pos, 18);
+    _mapController.moveAndRotate(pos, 18, 0.0);
   }
 
   Future<void> _criarPonto() async {
