@@ -109,12 +109,12 @@ class MapaImporter {
     return dest.path;
   }
 
-  /// Quantos pontos de campo e fotos a missão tem hoje.
+  /// - Quantos pontos de campo e fotos a missão tem hoje.
   static Future<ResumoMissao> resumo(int missaoId) async {
     final db = await Create.database;
 
     final p = await db.rawQuery(
-      'SELECT COUNT(*) AS n FROM pontos WHERE missao_id = ? AND camada IS NULL',
+      'SELECT COUNT(*) AS n FROM pontos WHERE missao_id = ?',
       [missaoId],
     );
     final f = await db.rawQuery(
@@ -132,6 +132,7 @@ class MapaImporter {
     required ZipMapa zip,
     required String pngPath,
     required List<String> camadas,
+    required bool sobrescreverPontos,
   }) async {
     final db = await Create.database;
 
@@ -147,12 +148,27 @@ class MapaImporter {
 
     await db.transaction((txn) async {
       await txn.delete('mapas', where: 'missao_id = ?', whereArgs: [missaoId]);
-      // as fotos saem junto, pelo ON DELETE CASCADE
-      await txn.delete('pontos', where: 'missao_id = ?', whereArgs: [missaoId]);
+
+      if (sobrescreverPontos) {
+        // as fotos saem junto, pelo ON DELETE CASCADE
+        await txn.delete(
+          'pontos',
+          where: 'missao_id = ?',
+          whereArgs: [missaoId],
+        );
+      }
 
       await txn.insert('mapas', mapa.toMap());
 
       var numero = 1;
+      if (!sobrescreverPontos) {
+        final r = await txn.rawQuery(
+          'SELECT COALESCE(MAX(numero), 0) AS m FROM pontos WHERE missao_id = ?',
+          [missaoId],
+        );
+        numero = (r.first['m'] as int) + 1;
+      }
+
       for (final camada in camadas) {
         for (final pt in zip.camadas[camada] ?? <PontoImportado>[]) {
           final ponto = PontoModel(
@@ -205,7 +221,7 @@ class ZipMapa {
 }
 
 class ResumoMissao {
-  final int pontosManuais;
+  final int pontos;
   final int fotos;
-  const ResumoMissao(this.pontosManuais, this.fotos);
+  const ResumoMissao(this.pontos, this.fotos);
 }

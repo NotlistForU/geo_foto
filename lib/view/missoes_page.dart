@@ -19,6 +19,8 @@ class MissaoPage extends StatefulWidget {
   State<MissaoPage> createState() => _MissaoPageState();
 }
 
+enum EscolhaImportar { cancelar, sobrescrever, manter }
+
 class _MissaoPageState extends State<MissaoPage> {
   final ArquivoService _arquivoService = ArquivoService();
   late Future<List<MissaoModel>> missoesFuture;
@@ -149,11 +151,26 @@ class _MissaoPageState extends State<MissaoPage> {
       String? pngPath;
 
       try {
-        // 1. Perguntas, sem gravar nada
         final resumo = await MapaImporter.resumo(missao.id);
-        if (resumo.pontosManuais > 0 || resumo.fotos > 0) {
-          final ok = await _confirmarSobrescrever(resumo);
-          if (!ok || !mounted) return;
+
+        bool sobrescreve = false;
+
+        if (resumo.pontos > 0 || resumo.fotos > 0) {
+          final escolha = await _escolhaImportar(resumo);
+          if (escolha == null || !mounted) {
+            return;
+          }
+
+          switch (escolha) {
+            case EscolhaImportar.cancelar:
+              return;
+
+            case EscolhaImportar.manter:
+              sobrescreve = false;
+
+            case EscolhaImportar.sobrescrever:
+              sobrescreve = true;
+          }
         }
 
         var camadas = <String>[];
@@ -163,7 +180,6 @@ class _MissaoPageState extends State<MissaoPage> {
           camadas = escolhidas;
         }
 
-        // 2. Gravação
         final antigo = await MapaModel.buscarPorMissao(missao.id);
         pngPath = await MapaImporter.salvarPng(zip);
 
@@ -172,11 +188,12 @@ class _MissaoPageState extends State<MissaoPage> {
           zip: zip,
           pngPath: pngPath,
           camadas: camadas,
+          sobrescreverPontos: sobrescreve,
         );
-
-        // Banco já gravado: falha de limpeza não desfaz a importação
         try {
-          await ArquivoService.excluirPastaPontos(missao);
+          if (sobrescreve) {
+            await ArquivoService.excluirPastaPontos(missao);
+          }
           if (antigo != null) {
             final arquivoAntigo = File(antigo.imagePath);
             if (await arquivoAntigo.exists()) await arquivoAntigo.delete();
@@ -200,28 +217,43 @@ class _MissaoPageState extends State<MissaoPage> {
     }
   }
 
-  Future<bool> _confirmarSobrescrever(ResumoMissao r) async {
-    final ok = await showDialog<bool>(
+  Future<EscolhaImportar?> _escolhaImportar(ResumoMissao r) async {
+    final escolha = await showDialog<EscolhaImportar>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Sobrescrever missão?'),
+        title: Row(
+          children: [
+            Expanded(child: const Text('Sobrescrever missão?')),
+            IconButton(
+              onPressed: () => Navigator.pop(ctx, EscolhaImportar.cancelar),
+              icon: const CircleAvatar(
+                radius: 16,
+                child: Icon(Icons.close, size: 18),
+              ),
+            ),
+          ],
+        ),
         content: Text(
-          'Esta missão tem ${r.pontosManuais} ponto(s) manuais criado(s) em campo '
-          'e ${r.fotos} foto(s). Importar um novo mapa vai APAGAR todos eles. Continuar?',
+          'Esta missão tem ${r.pontos} ponto(s)'
+          ' e ${r.fotos} foto(s). Manter os pontos com as fotos ou sobrescrever apagando os pontos e fotos?',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
+            onPressed: () {
+              Navigator.pop(ctx, EscolhaImportar.sobrescrever);
+            },
+            child: const Text('Sobrescrever'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Apagar e importar'),
+            onPressed: () {
+              Navigator.pop(ctx, EscolhaImportar.manter);
+            },
+            child: const Text('Manter'),
           ),
         ],
       ),
     );
-    return ok ?? false;
+    return escolha;
   }
 
   /// null = cancelou; lista vazia = só o mapa.
