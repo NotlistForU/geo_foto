@@ -441,7 +441,7 @@ class ArquivoService {
   }
 
   static String nomeDaPastaPonto(PontoModel ponto) {
-    return "ponto_${ponto.numero.toString().padLeft(3, '0')}";
+    return "ponto_${ponto.id.toString().padLeft(3, '0')}";
   }
 }
 

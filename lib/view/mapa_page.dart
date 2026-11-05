@@ -85,6 +85,15 @@ class _MapaPageState extends State<MapaPage> {
         onExcluido: () {
           setState(() => _pontos.removeWhere((p) => p.id == ponto.id));
         },
+        onPontoAtualizado: (pontoAtualizado) {
+          setState(() {
+            final index = _pontos.indexWhere((p) => p.id == pontoAtualizado.id);
+
+            if (index != -1) {
+              _pontos[index] = pontoAtualizado;
+            }
+          });
+        },
       ),
     );
   }
