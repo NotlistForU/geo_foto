@@ -82,6 +82,85 @@ class _PontoWidgetState extends State<PontoWidget> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  Future<void> _selecionarImagemGaleria() async {
+    _pararMonitoramento();
+
+    if (!mounted) return;
+
+    final observacaoController = TextEditingController();
+
+    try {
+      final observacoes = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Observação da foto'),
+          content: TextField(
+            controller: observacaoController,
+            autofocus: true,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              hintText: 'Digite uma observação (opcional)',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, ''),
+              child: const Text('Seguir sem observação'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(
+                dialogContext,
+                observacaoController.text.trim(),
+              ),
+              child: const Text('Escolher foto'),
+            ),
+          ],
+        ),
+      );
+
+      if (!mounted || observacoes == null) return;
+
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SafeArea(
+            child: cam.GalleryOverlay(
+              latitude: _ponto.latitude,
+              longitude: _ponto.longitude,
+              observacoes: observacoes.isEmpty ? null : observacoes,
+              onImagemGallery:
+                  (bytes, latitude, longitude, altitude, observacoes) async {
+                    try {
+                      await ArquivoService.salvarFoto(
+                        pontoId: _ponto.id,
+                        bytes: bytes,
+                        latitude: latitude,
+                        longitude: longitude,
+                        altitude: altitude,
+                        observacoes: observacoes ?? '',
+                      );
+                    } catch (e) {
+                      _aviso('Erro ao salvar foto: $e');
+                    }
+                  },
+            ),
+          ),
+        ),
+      );
+    } finally {
+      observacaoController.dispose();
+
+      if (mounted) {
+        _iniciarMonitoramento();
+      }
+    }
+
+    if (mounted) {
+      await _carregarFotos();
+    }
+  }
+
   Future<void> _tirarFoto() async {
     _pararMonitoramento();
     if (!mounted) return;
@@ -113,7 +192,6 @@ class _PontoWidgetState extends State<PontoWidget> {
                   _aviso('Erro ao salvar foto: $e');
                 }
               },
-              onAbrirGaleria: () {},
             ),
           ),
         ),
@@ -383,6 +461,15 @@ class _PontoWidgetState extends State<PontoWidget> {
                 onPressed: _tirarFoto,
                 icon: const Icon(Icons.photo_camera),
                 label: const Text('Tirar foto'),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _selecionarImagemGaleria,
+                icon: const Icon(Icons.photo_library_outlined),
+                label: const Text('Buscar foto na galeria'),
               ),
             ),
           ],
